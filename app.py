@@ -1,10 +1,13 @@
 import os
 import click
+from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
 app = Flask(__name__)
+
+load_dotenv('/home/ec2-user/.env')
 
 DB_HOST = os.getenv("DB_HOST")
 DB_NAME = os.getenv("DB_NAME")
@@ -22,6 +25,7 @@ def get_db_connection():
 
 def init_db():
     print("Tentando inicializar a tabela 'flags'...")
+    print(f"Conectando ao banco de dados em {DB_HOST} com usuário {DB_USER}...")
     try:
         conn = get_db_connection()
         cur = conn.cursor()
