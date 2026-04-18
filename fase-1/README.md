@@ -1,12 +1,20 @@
+<div align="center">
+  <br/>
+  <hr style="border: none; border-top: 1px solid #ED145B; width: 100%; margin: 0 auto"/>
+</div>
+
+![/.github/LOGO-FIAP.png](/.github/LOGO-FIAP.png)
+
 # Tech Challenge - Objetivos da Fase 1
 
 Analisamos a aplicação Toggle Master conforme solicitado e chegamos nos seguintes entendimentos:
 
 ## Entregáveis da Fase 1
 
-1.  [**Vídeo de Demonstração (até 15 minutos):**](https://youtu.be/ylH_xMPFNNw)
+1. [**Vídeo de Demonstração (até 15 minutos):**](https://youtu.be/ylH_xMPFNNw)
 
-2.  **Documentação Separada por Tópicos:**
+2. **Documentação Separada por Tópicos:**
+
 - [Vantagens](#vantagens);
 - [Desvantagens](#desvantagens);
 - [Atende aos 12 Fatores](#-cobertura-dos-12-fatores);
@@ -16,14 +24,15 @@ Analisamos a aplicação Toggle Master conforme solicitado e chegamos nos seguin
 - [Diagrama Imagem](#diagrama-de-arquitetura-aplicada)
 - [Calculadora](#calculadora-com-estimativa-de-preço);
 
-3.  **Integrantes do Grupo**: 
+1. **Integrantes do Grupo**:
+
 - [Aline Estevo da Silva](www.linkedin.com/in/aline-estevo)
 - [Thiago de Melo Macedo](#)
 - [Jefferson Fernandes de Freitas](#)
 - [Vinicius Jorge de Oliveira](#)
 - [Maurício Magnago Castro Sá](#)
 
-> **Importante:** Deixando uma observação de que não foi possível aplicar essa ação **Compreender e aplicar práticas básicas de segurança na AWS (IAM, Security Groups)** por falta de permissão no laboratório da AWS. 
+> **Importante:** Deixando uma observação de que não foi possível aplicar essa ação **Compreender e aplicar práticas básicas de segurança na AWS (IAM, Security Groups)** por falta de permissão no laboratório da AWS.
 >Fizemos um análise ponto a ponto nos 12 fatores sinalizando quais entendemos que atende 🆗, atende parcialmente 🔥 e não atende 👎.
 
 ## Vantagens
@@ -53,7 +62,6 @@ Analisamos a aplicação Toggle Master conforme solicitado e chegamos nos seguin
 - Config permite configuração externa no ambiente docker, mas não está implementada no momento.
 - O banco de dados deve ser tratado como um recurso externo e não acoplado ao código
 
-
 ## Legenda dos Símbolos Utilizados na Classificação
 
 - **🆗 ATENDE:** atende totalmente.
@@ -62,23 +70,23 @@ Analisamos a aplicação Toggle Master conforme solicitado e chegamos nos seguin
 
 ## Os 12 Fatores Sinalizados Conforme Entendimento do Grupo
 
-- **I. Base de Código**: 
+- **I. Base de Código**:
 Uma base de código com rastreamento utilizando controle de revisão, muitos deploys 🆗
-- **II. Dependências**: 
+- **II. Dependências**:
 Declare e isole as dependências 🆗
 - **III. Configurações**:
 Armazene as configurações no ambiente 🔥
-- **IV. Serviços de Apoio**: 
+- **IV. Serviços de Apoio**:
 Trate os serviços de apoio, como recursos ligados 👎
-- **V. Construa, lance, execute**: 
+- **V. Construa, lance, execute**:
 Separe estritamente os builds e execute em estágios 👎
-- **VI. Processos**: 
+- **VI. Processos**:
 Execute a aplicação como um ou mais processos que não armazenam estado 🆗
-- **VII. Vínculo de porta**: 
+- **VII. Vínculo de porta**:
 Exporte serviços por ligação de porta 🆗
-- **VIII. Concorrência**: 
+- **VIII. Concorrência**:
 Dimensione por um modelo de processo 👎
-- **IX. Descartabilidade**: 
+- **IX. Descartabilidade**:
 Maximizar a robustez com inicialização e desligamento rápido 🆗 Ajuste de robustes (autoscale, redundância)
 - **X. Dev/prod semelhantes**
 Mantenha o desenvolvimento, teste, produção o mais semelhante possível 🔥
