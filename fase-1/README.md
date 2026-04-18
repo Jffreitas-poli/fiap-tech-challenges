@@ -18,9 +18,9 @@ Analisamos a aplicação Toggle Master conforme solicitado e chegamos nos seguin
 - [Análise do Monolito](#porque-aplicação-é-um-monolito);
 - [Vantagens](#vantagens);
 - [Desvantagens](#desvantagens);
-- [Atende aos 12 Fatores](#-cobertura-dos-12-fatores);
+- [Atende aos 12 Fatores](#cobertura-dos-12-fatores);
 - [Pontos de Melhoria](#pontos-de-melhoria);
-- [Análise Ponto a Ponto dos 12 Fatores com Simbologia](#-legenda-dos-símbolos-utilizados-na-classificação);
+- [Análise Ponto a Ponto dos 12 Fatores com Simbologia](#legenda-dos-símbolos-utilizados-na-classificação);
 - [Diagrama Link](https://excalidraw.com/#json=7f1MZc40Wjoz2eTTvR7dp,otmG3QofYMlNNVtNjaHMoA);
 - [Diagrama Imagem](#diagrama-de-arquitetura-aplicada)
 - [Calculadora](#calculadora-com-estimativa-de-preço);
