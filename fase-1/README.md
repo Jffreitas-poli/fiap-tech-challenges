@@ -33,7 +33,7 @@ Analisamos a aplicação Toggle Master conforme solicitado e chegamos nos seguin
 - [Vinicius Jorge de Oliveira](#)
 - [Maurício Magnago Castro Sá](https://www.linkedin.com/in/mcastrosa)
 
-> **Importante:** Deixando uma observação de que não foi possível aplicar essa ação **Compreender e aplicar práticas básicas de segurança na AWS (IAM, Security Groups)** por falta de permissão no laboratório da AWS.
+> **Importante:** Deixando uma observação de que foi possível aplicar parcialmente essa ação: **Compreender e aplicar práticas básicas de segurança na AWS (IAM, Security Groups)** por falta de permissão no serviço **IAM** no laboratório da AWS.
 >Fizemos um análise ponto a ponto nos 12 fatores sinalizando quais entendemos que atende 🆗, atende parcialmente 🔥 e não atende 👎.
 
 ## Porque aplicação é um Monolito?
