@@ -120,6 +120,8 @@ Executar tarefas de administração/gerenciamento como processos pontuais 🔥
 
 ## Calculadora com Estimativa de Preço
 
+Os recursos de infraestrutura descritos neste documento foram definidos pelo grupo com base em critérios de otimização de custos, adequados ao estágio de MVP do produto. Dado que a base de usuários ainda não está estabelecida, optou-se por uma alocação conservadora, passível de revisão conforme o produto evolui.
+
 ![](/.github/price-calculator.jpeg)
 
 ## Diagrama de Arquitetura Aplicada
