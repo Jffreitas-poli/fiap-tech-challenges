@@ -1,0 +1,47 @@
+services:
+  auth-service:
+    container_name: auth-service
+    build: 
+      target: staging
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER_AUTH_SERVICE}:${DB_PASSWORD_AUTH_SERVICE}@auth-db:5432/${DB_NAME_AUTH_SERVICE}
+      - MASTER_KEY=${MASTER_KEY}
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    networks:
+      - tech-challenge-network
+
+  auth-db:
+    image: postgres:13
+    container_name: auth-db
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_DB=${DB_NAME_AUTH_SERVICE}
+      - POSTGRES_USER=${DB_USER_AUTH_SERVICE}
+      - POSTGRES_PASSWORD=${DB_PASSWORD_AUTH_SERVICE}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER_AUTH_SERVICE} -d ${DB_NAME_AUTH_SERVICE}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5431:5432"
+    volumes:
+      - auth-data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - tech-challenge-network
+
+volumes:
+  auth-data:
+
+networks:
+  tech-challenge-network:
+    external: true
+    name: tech-challenge-network

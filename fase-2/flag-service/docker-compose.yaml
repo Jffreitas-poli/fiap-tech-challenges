@@ -1,0 +1,47 @@
+services:
+  flag-service:
+    build:
+      context: .
+      target: staging
+    ports:
+      - "8002:8002"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER_FLAG_SERVICE}:${DB_PASSWORD_FLAG_SERVICE}@${DB_HOST_FLAG_SERVICE}:5432/${DB_NAME_FLAG_SERVICE}
+      - AUTH_SERVICE_URL=http://auth-service:8001
+    networks:
+      - tech-challenge-network
+    depends_on:
+      flag-db:
+        condition: service_healthy
+    
+  flag-db:
+    container_name: flag-db
+    image: postgres:13
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=${DB_NAME_FLAG_SERVICE}
+      - POSTGRES_USER=${DB_USER_FLAG_SERVICE}
+      - POSTGRES_PASSWORD=${DB_PASSWORD_FLAG_SERVICE}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${DB_USER_FLAG_SERVICE}", "-d", "${DB_NAME_FLAG_SERVICE}"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 15s
+    volumes:
+      - flag-data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - tech-challenge-network 
+
+volumes:
+  flag-data:
+
+networks:
+  tech-challenge-network:
+    name: tech-challenge-network

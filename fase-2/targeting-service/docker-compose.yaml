@@ -1,0 +1,47 @@
+
+services:
+  targeting-service:
+    build:
+      context: .
+      target: staging
+    ports:
+      - "8003:8003"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER_TARGETING_SERVICE}:${DB_PASSWORD_TARGETING_SERVICE}@${DB_HOST_TARGETING_SERVICE}/${DB_NAME_TARGETING_SERVICE}
+    networks:
+      - tech-challenge-network
+    depends_on:
+      targeting-db:
+        condition: service_healthy
+
+  targeting-db:
+    container_name: targeting-db
+    image: postgres:13
+    env_file:
+      - .env
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_DB=${DB_NAME_TARGETING_SERVICE}                                       
+      - POSTGRES_USER=${DB_USER_TARGETING_SERVICE}
+      - POSTGRES_PASSWORD=${DB_PASSWORD_TARGETING_SERVICE}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${DB_USER_TARGETING_SERVICE}", "-d", "${DB_NAME_TARGETING_SERVICE}"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 15s
+    volumes:
+      - targeting-data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - tech-challenge-network
+
+volumes:
+  targeting-data:
+
+networks:
+  tech-challenge-network:
+    external: true
