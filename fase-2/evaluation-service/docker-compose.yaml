@@ -1,0 +1,49 @@
+services:
+  evaluation-service:
+    container_name: evaluation-service
+    build:
+      context: .
+      target: staging
+    ports:
+      - "8004:8004"
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=${REDIS_URL}
+      - FLAG_SERVICE_URL=${FLAG_SERVICE_URL}
+      - AUTH_SERVICE_URL=${AUTH_SERVICE_URL}
+      - ANALYTICS_SERVICE_URL=${ANALYTICS_SERVICE_URL}
+      - TARGETING_SERVICE_URL=${TARGETING_SERVICE_URL}
+      - SERVICE_API_KEY=${SERVICE_API_KEY}
+      - AWS_SQS_URL=${AWS_SQS_URL}
+      - AWS_REGION=${AWS_REGION}
+      - EVALUATION_INTERVAL=${EVALUATION_INTERVAL}
+    networks:
+      - tech-challenge-network
+    depends_on:
+      redis-db:
+        condition: service_healthy
+
+  redis-db:
+    container_name: redis-db
+    image: redis:6
+    ports:
+      - "6379:6379"
+    networks:
+      - tech-challenge-network
+    volumes:
+      - evaluation-data:/var/lib/redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 15s
+
+volumes:
+  evaluation-data:
+
+networks:
+  tech-challenge-network:
+    external: true
+    name: tech-challenge-network

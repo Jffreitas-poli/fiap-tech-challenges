@@ -1,0 +1,10 @@
+include:
+  - ./auth-service/docker-compose.yaml
+  - ./flag-service/docker-compose.yaml
+  - ./targeting-service/docker-compose.yaml
+  - ./evaluation-service/docker-compose.yaml
+  - ./analytics-service/docker-compose.yaml
+
+networks:
+  tech-challenge-network:
+    name: tech-challenge-network

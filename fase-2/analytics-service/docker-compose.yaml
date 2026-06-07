@@ -1,0 +1,55 @@
+services:
+  analytics-service:
+    build:
+      context: .
+      target: staging
+    ports:
+      - "8005:8005"
+    env_file:
+      - .env
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_SQS_URL=${AWS_SQS_URL}
+      - AWS_DYNAMODB_TABLE=${AWS_DYNAMODB_TABLE}
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    networks:
+      - tech-challenge-network
+    depends_on:
+      localstack:
+        condition: service_healthy
+
+  localstack:
+    image: localstack/localstack:3
+    env_file:
+      - .env
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=sqs,dynamodb
+      - EXTRA_CORS_ALLOWED_ORIGINS=*
+      - EXTRA_CORS_ALLOWED_HEADERS=Content-Type,Authorization,X-Amz-Date,X-Api-Key
+      - DEFAULT_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - DATA_DIR=/var/lib/localstack/data
+    volumes:
+      - ./localstack:/var/lib/localstack
+      - ./localstack/init/ready.d:/etc/localstack/init/ready.d
+    healthcheck:
+      test: ["CMD", "awslocal", "sqs", "list-queues"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 15s
+    networks:
+      - tech-challenge-network
+
+volumes:
+  localstack:
+
+networks:
+  tech-challenge-network:
+    external: true
+    name: tech-challenge-network

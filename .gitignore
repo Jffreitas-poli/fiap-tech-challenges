@@ -1,1 +1,13 @@
+# Ignore environment variable files
+
+#fase-1
 /fase-1/.env
+
+#fase-2
+/fase-2/analytics-service/.env
+/fase-2/auth-service/.env
+/fase-2/targeting-service/.env
+/fase-2/flag-service/.env
+/fase-2/evaluation-service/.env
+
+#fase-3
