@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: evaluation-configmap
+  namespace: evaluation
+data:
+  PORT: "8004"
+  REDIS_URL: "redis://tc-redis.lxhszc.ng.0001.use2.cache.amazonaws.com:6379/0"
+  FLAG_SERVICE_URL: "http://flag-service.flag.svc.cluster.local:8002"
+  TARGETING_SERVICE_URL: "http://targeting-service.targeting.svc.cluster.local:8003"
+  AWS_SQS_URL: "https://sqs.us-east-2.amazonaws.com/047719652987/tc-sqs"
+  AWS_REGION: "us-east-2"

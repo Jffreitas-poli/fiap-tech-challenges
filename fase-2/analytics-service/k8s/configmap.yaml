@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: analytics-configmap
+  namespace: analytics
+data:
+  PORT: "8005"
+  AWS_SQS_URL: "https://sqs.us-east-2.amazonaws.com/047719652987/tc-sqs"
+  AWS_DYNAMODB_TABLE: "tc-dynamo"
+  AWS_REGION: "us-east-2"
