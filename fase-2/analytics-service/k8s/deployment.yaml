@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-deployment
+  namespace: analytics
+  labels:
+    app: analytics
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: analytics
+  template:
+    metadata:
+      labels:
+        app: analytics
+    spec:
+      containers:
+      - name: analytics-container
+        image: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/analytics-image:latest
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "20m"
+          limits:
+            memory: "128Mi"
+            cpu: "40m"
+        ports:
+        - containerPort: 8005
+        envFrom:
+        - configMapRef:
+            name: analytics-configmap
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8005
+          initialDelaySeconds: 10
+          periodSeconds: 10

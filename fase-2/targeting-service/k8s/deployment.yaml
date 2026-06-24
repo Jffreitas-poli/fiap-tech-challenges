@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: targeting-deployment
+  namespace: targeting
+  labels:
+    app: targeting
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: targeting
+  template:
+    metadata:
+      labels:
+        app: targeting
+    spec:
+      containers:
+      - name: targeting-container
+        image: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/targeting-image:latest
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "20m"
+          limits:
+            memory: "128Mi"
+            cpu: "40m"
+        ports:
+        - containerPort: 8003
+        envFrom:
+        - configMapRef:
+            name: targeting-configmap
+        - secretRef:
+            name: targeting-secret
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8003
+          initialDelaySeconds: 10
+          periodSeconds: 10
