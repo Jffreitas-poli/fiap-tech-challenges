@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: targeting-deployment
-  namespace: targeting
+  namespace: toggle
   labels:
     app: targeting
 spec:

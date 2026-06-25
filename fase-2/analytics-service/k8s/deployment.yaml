@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: analytics-deployment
-  namespace: analytics
+  namespace: toggle
   labels:
     app: analytics
 spec:

@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: evaluation-deployment
-  namespace: evaluation
+  namespace: toggle
   labels:
     app: evaluation
 spec:

@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: auth-deployment
-  namespace: auth
+  namespace: toggle
   labels:
     app: auth
 spec:
