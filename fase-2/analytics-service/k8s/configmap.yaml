@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: analytics-configmap
-  namespace: analytics
+  namespace: toggle
 data:
   PORT: "8005"
   AWS_SQS_URL: "https://sqs.us-east-2.amazonaws.com/047719652987/tc-sqs"
