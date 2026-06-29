@@ -17,7 +17,10 @@ spec:
     spec:
       containers:
       - name: flag-container
-        image: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/flag-image:latest
+        image: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/flag-image:1.0
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
         resources:
           requests:
             memory: "64Mi"
@@ -38,3 +41,13 @@ spec:
             port: 8002
           initialDelaySeconds: 10
           periodSeconds: 10
+          failureThreshold: 3
+          successThreshold: 1
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8002
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
+          successThreshold: 1
