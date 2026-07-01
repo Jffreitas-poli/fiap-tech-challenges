@@ -1,13 +1,4 @@
 apiVersion: keda.sh/v1alpha1
-kind: TriggerAuthentication
-metadata:
-  name: keda-aws-credentials
-  namespace: toggle
-spec:
-  podIdentity:
-    provider: aws
----
-apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
   name: analytics-service-scaler
