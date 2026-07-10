@@ -1,0 +1,40 @@
+# Values do Helm chart ingress-nginx (https://kubernetes.github.io/ingress-nginx)
+# Aplicar com:
+#   helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+#     -n ingress-nginx --create-namespace \
+#     -f fase-2/ingress-nginx-values.yaml
+controller:
+  replicaCount: 2
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+  # Evita que réplicas do controller caiam no mesmo node, para que a falha
+  # de um único node não derrube o ponto único de entrada do cluster.
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                    - controller
+            topologyKey: kubernetes.io/hostname
+
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/component: controller
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
