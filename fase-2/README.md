@@ -80,7 +80,7 @@ O propósito de cada escolha:
 
 ## Balanceamento de Carga
 
-O **NGINX Ingress Controller** atua como reverse proxy e load balancer, distribuindo o tráfego entre os pods de cada serviço e realizando health checks para failover automático.
+O **NGINX Ingress Controller** atua como reverse proxy e load balancer, distribuindo o tráfego entre os pods de cada serviço com base nos endpoints saudáveis. O self-healing (reinício e recriação de pods) é responsabilidade do Kubernetes (kubelet + liveness/readiness probes); o Ingress realiza o failover de roteamento, direcionando o tráfego para longe de pods não prontos ou indisponíveis.
 
 ## Escalabilidade Automática
 
@@ -103,13 +103,6 @@ Implementamos autoscaling orientado a eventos com **KEDA**, escalando o `analyti
 
 ![Diagrama de Arquitetura Fase 2](/.github/toggle-master-arquitetura-distribuida.svg
 )
-
-
-- [Aline Estevo da Silva](https://www.linkedin.com/in/aline-estevo)
-- [Thiago de Melo Macedo](https://www.linkedin.com/in/thiago-melo-macedo)
-- [Jefferson Fernandes de Freitas](#)
-- [Vinicius Jorge de Oliveira](#)
-- [Maurício Magnago Castro Sá](https://www.linkedin.com/in/mcastrosa)
 
 ## Observações do Vídeo e Decisões de Arquitetura
 
