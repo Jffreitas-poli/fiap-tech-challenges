@@ -104,7 +104,6 @@ Implementamos autoscaling orientado a eventos com **KEDA**, escalando o `analyti
 ![Diagrama de Arquitetura Fase 2](/.github/toggle-master-arquitetura-distribuida.svg
 )
 
-## Integrantes do Grupo
 
 - [Aline Estevo da Silva](https://www.linkedin.com/in/aline-estevo)
 - [Thiago de Melo Macedo](https://www.linkedin.com/in/thiago-melo-macedo)
