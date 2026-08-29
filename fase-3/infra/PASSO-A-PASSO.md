@@ -3,9 +3,9 @@
 Guia sequencial para levar o ToggleMaster da Fase 2 (operação manual) para a
 Fase 3 (Terraform + CI/CD + GitOps). Execute os passos **na ordem**.
 
-- **Conta / região:** AWS Academy `047719652987`, `us-east-2`
+- **Conta / região:** AWS Academy `361075236043`, `us-east-1`
 - **Cluster:** `tc-eks` · **Namespace:** `toggle`
-- **State remoto:** `s3://tc-fiap-tfstate-047719652987`, lock `tc-fiap-tflock`
+- **State remoto:** `s3://tc-fiap-tfstate-361075236043`, lock `tc-fiap-tflock`
 
 > Sob o AWS Academy o Terraform **não cria IAM Role/Policy/OIDC**. Cluster e nodes
 > usam a `LabRole`; os workflows usam chaves estáticas da sessão do lab.
@@ -42,14 +42,14 @@ git checkout chore/add-fase-3    # ou a branch/PR onde a infra foi mergeada
 export AWS_ACCESS_KEY_ID="ASIA..."
 export AWS_SECRET_ACCESS_KEY="..."
 export AWS_SESSION_TOKEN="..."
-export AWS_DEFAULT_REGION="us-east-2"
+export AWS_DEFAULT_REGION="us-east-1"
 ```
 
 4. Valide:
 
 ```bash
 aws sts get-caller-identity
-# Account deve ser 047719652987
+# Account deve ser 361075236043
 ```
 
 ---
@@ -69,12 +69,12 @@ terraform apply
 Confirme:
 
 ```bash
-aws s3api head-bucket --bucket tc-fiap-tfstate-047719652987 && echo "bucket OK"
+aws s3api head-bucket --bucket tc-fiap-tfstate-361075236043 && echo "bucket OK"
 aws dynamodb describe-table --table-name tc-fiap-tflock --query 'Table.TableStatus'
 ```
 
 > Se o bucket já existir de uma tentativa anterior, rode
-> `terraform import aws_s3_bucket.tfstate tc-fiap-tfstate-047719652987` e
+> `terraform import aws_s3_bucket.tfstate tc-fiap-tfstate-361075236043` e
 > `terraform import aws_dynamodb_table.tflock tc-fiap-tflock` antes do apply.
 
 Volte para a raiz:
@@ -108,7 +108,7 @@ Feito uma vez no repositório (precisa de permissão de admin).
 
 | Variable | Valor |
 |---|---|
-| `AWS_REGION` | `us-east-2` |
+| `AWS_REGION` | `us-east-1` |
 | `TF_VERSION` | `1.9.8` |
 
 ### 3.3 Environments
@@ -131,7 +131,7 @@ cp terraform.tfvars.example terraform.tfvars   # já vem versionado; edite se ne
 Ajuste em `terraform.tfvars` se preciso:
 
 - `admin_principal_arns` — inclua o ARN da role/usuário que vai rodar `kubectl`
-  (ex.: `arn:aws:iam::047719652987:role/LabRole` já está lá).
+  (ex.: `arn:aws:iam::361075236043:role/LabRole` já está lá).
 - CIDRs, tipos de instância — os defaults já são enxutos para o Academy.
 
 **Não** coloque senha de banco aqui — o Terraform gera e guarda no Secrets Manager.
@@ -167,7 +167,7 @@ Applies seguintes: só `terraform apply` (uma etapa).
 ### 6.1 kubeconfig
 
 ```bash
-aws eks update-kubeconfig --name tc-eks --region us-east-2
+aws eks update-kubeconfig --name tc-eks --region us-east-1
 kubectl get nodes          # 2 nodes Ready
 ```
 
@@ -207,16 +207,16 @@ O `analytics-service` **não** tem secret — usa o configmap + a role dos nodes
 ### 7.1 Recursos AWS
 
 ```bash
-aws eks describe-cluster --name tc-eks --region us-east-2 --query 'cluster.status'          # ACTIVE
-aws ecr describe-repositories --region us-east-2 --query 'repositories[].repositoryName'     # 5 repos tech-challenge/*
-aws rds describe-db-instances --region us-east-2 \
+aws eks describe-cluster --name tc-eks --region us-east-1 --query 'cluster.status'          # ACTIVE
+aws ecr describe-repositories --region us-east-1 --query 'repositories[].repositoryName'     # 5 repos tech-challenge/*
+aws rds describe-db-instances --region us-east-1 \
   --query 'DBInstances[].[DBInstanceIdentifier,DBInstanceStatus]' --output table              # tc-rds-auth/flag/targeting = available
-aws elasticache describe-replication-groups --region us-east-2 \
+aws elasticache describe-replication-groups --region us-east-1 \
   --query 'ReplicationGroups[].[ReplicationGroupId,Status]' --output table                    # tc-redis = available
-aws sqs get-queue-url --queue-name tc-sqs --region us-east-2
-aws sqs get-queue-url --queue-name tc-sqs-dlq --region us-east-2
-aws dynamodb describe-table --table-name tc-dynamo --region us-east-2 --query 'Table.TableStatus'  # ACTIVE
-aws secretsmanager list-secrets --region us-east-2 --query 'SecretList[].Name'                 # tc-rds-*-credentials
+aws sqs get-queue-url --queue-name tc-sqs --region us-east-1
+aws sqs get-queue-url --queue-name tc-sqs-dlq --region us-east-1
+aws dynamodb describe-table --table-name tc-dynamo --region us-east-1 --query 'Table.TableStatus'  # ACTIVE
+aws secretsmanager list-secrets --region us-east-1 --query 'SecretList[].Name'                 # tc-rds-*-credentials
 ```
 
 ### 7.2 Cluster e add-ons

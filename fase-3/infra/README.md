@@ -30,7 +30,7 @@ terraform/
 ```bash
 cd fase-3/infra/bootstrap
 terraform init
-terraform apply            # cria s3://tc-fiap-tfstate-047719652987 e a tabela tc-fiap-tflock
+terraform apply            # cria s3://tc-fiap-tfstate-361075236043 e a tabela tc-fiap-tflock
 ```
 
 Alternativa em AWS CLI: ver a seção "Bootstrap" no plano
@@ -61,7 +61,7 @@ sincronizar `fase-3/gitops/`).
 ## 3. Pós-apply
 
 ```bash
-aws eks update-kubeconfig --name tc-eks --region us-east-2
+aws eks update-kubeconfig --name tc-eks --region us-east-1
 
 # Criar os Secrets do K8s a partir dos outputs (enquanto não há External Secrets):
 cd fase-3/infra/terraform/envs/lab
@@ -80,12 +80,12 @@ tem secret — usa configmap + role dos nodes.
 
 ```bash
 # AWS
-aws eks describe-cluster --name tc-eks --region us-east-2 --query 'cluster.status'
-aws ecr describe-repositories --region us-east-2 --query 'repositories[].repositoryName'
-aws rds describe-db-instances --region us-east-2 --query 'DBInstances[].DBInstanceIdentifier'
-aws elasticache describe-replication-groups --region us-east-2 --query 'ReplicationGroups[].ReplicationGroupId'
-aws sqs get-queue-url --queue-name tc-sqs --region us-east-2
-aws dynamodb describe-table --table-name tc-dynamo --region us-east-2 --query 'Table.TableStatus'
+aws eks describe-cluster --name tc-eks --region us-east-1 --query 'cluster.status'
+aws ecr describe-repositories --region us-east-1 --query 'repositories[].repositoryName'
+aws rds describe-db-instances --region us-east-1 --query 'DBInstances[].DBInstanceIdentifier'
+aws elasticache describe-replication-groups --region us-east-1 --query 'ReplicationGroups[].ReplicationGroupId'
+aws sqs get-queue-url --queue-name tc-sqs --region us-east-1
+aws dynamodb describe-table --table-name tc-dynamo --region us-east-1 --query 'Table.TableStatus'
 
 # Cluster
 kubectl get nodes

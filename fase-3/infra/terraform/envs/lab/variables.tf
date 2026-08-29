@@ -1,13 +1,13 @@
 variable "region" {
   description = "Regiao AWS."
   type        = string
-  default     = "us-east-2"
+  default     = "us-east-1"
 }
 
 variable "account_id" {
   description = "ID da conta AWS (usado para montar ARNs)."
   type        = string
-  default     = "047719652987"
+  default     = "361075236043"
 }
 
 variable "cluster_name" {
@@ -31,7 +31,7 @@ variable "vpc_cidr" {
 variable "azs" {
   description = "Availability Zones."
   type        = list(string)
-  default     = ["us-east-2a", "us-east-2b"]
+  default     = ["us-east-1a", "us-east-1b"]
 }
 
 variable "public_subnet_cidrs" {

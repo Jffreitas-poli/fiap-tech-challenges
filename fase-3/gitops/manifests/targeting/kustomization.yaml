@@ -13,5 +13,5 @@ namespace: toggle
 
 # O passo final do CI de cada servico atualiza 'newTag' com a tag publicada no ECR.
 images:
-  - name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/targeting-image
+  - name: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/targeting-image
     newTag: "1.0"
