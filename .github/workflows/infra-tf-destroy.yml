@@ -47,6 +47,10 @@ jobs:
         with:
           terraform_version: ${{ env.TF_VERSION }}
 
+      # necessario para o null_resource.ingress_lb_cleanup (apaga o Service do
+      # ingress-nginx antes do teardown, liberando o NLB)
+      - uses: azure/setup-kubectl@v4
+
       - name: terraform init
         run: terraform init -input=false
 

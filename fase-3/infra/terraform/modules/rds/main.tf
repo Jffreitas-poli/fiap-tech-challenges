@@ -44,6 +44,10 @@ resource "aws_db_instance" "this" {
 resource "aws_secretsmanager_secret" "this" {
   name        = "${var.identifier}-credentials"
   description = "Credenciais do RDS ${var.identifier} (ToggleMaster)."
+
+  # ambiente de lab: apaga na hora no destroy, sem janela de 30 dias
+  # (evita "already scheduled for deletion" num re-apply rapido)
+  recovery_window_in_days = var.secret_recovery_window_days
 }
 
 resource "aws_secretsmanager_secret_version" "this" {

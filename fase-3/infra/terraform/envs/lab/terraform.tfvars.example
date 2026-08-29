@@ -4,7 +4,7 @@
 region          = "us-east-1"
 account_id      = "361075236043"
 cluster_name    = "tc-eks"
-cluster_version = "1.30"
+cluster_version = "1.31"
 
 vpc_cidr             = "10.20.0.0/16"
 azs                  = ["us-east-1a", "us-east-1b"]

@@ -15,9 +15,15 @@ variable "username" {
 }
 
 variable "engine_version" {
-  description = "Versao do PostgreSQL."
+  description = "Versao do PostgreSQL. Precisa existir na regiao (aws rds describe-db-engine-versions --engine postgres)."
   type        = string
-  default     = "16.4"
+  default     = "16.9"
+}
+
+variable "secret_recovery_window_days" {
+  description = "Janela de recuperacao do secret no Secrets Manager. 0 = apaga imediatamente no destroy (lab)."
+  type        = number
+  default     = 0
 }
 
 variable "instance_class" {

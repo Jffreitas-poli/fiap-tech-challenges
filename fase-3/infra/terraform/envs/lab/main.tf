@@ -203,6 +203,26 @@ module "addons" {
   depends_on = [module.eks]
 }
 
+# No DESTROY, roda ANTES de derrubar os add-ons: apaga o Service do
+# ingress-nginx para a AWS liberar o NLB. Sem isso, o Load Balancer +
+# security groups ficam orfaos e travam a exclusao da VPC (DependencyViolation).
+resource "null_resource" "ingress_lb_cleanup" {
+  triggers = {
+    cluster = var.cluster_name
+    region  = var.region
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      aws eks update-kubeconfig --name ${self.triggers.cluster} --region ${self.triggers.region} 2>/dev/null || exit 0
+      kubectl delete svc -n ingress-nginx ingress-nginx-controller --ignore-not-found --wait --timeout=300s || true
+    EOT
+  }
+
+  depends_on = [module.addons]
+}
+
 # Application "app-of-apps" -- ArgoCD passa a sincronizar fase-3/gitops/
 #
 # kubernetes_manifest exige conexao viva com a API do cluster JA no plan.
