@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Reaproveita os manifests da Fase 2 sem duplicar.
+# secrets.yaml e DELIBERADAMENTE omitido (credenciais commitadas em base64);
+# o Secret e criado a partir do 'terraform output' do modulo rds.
+resources:
+  - ../../../../fase-2/targeting-service/k8s/configmap.yaml
+  - ../../../../fase-2/targeting-service/k8s/deployment.yaml
+  - ../../../../fase-2/targeting-service/k8s/service.yaml
+
+namespace: toggle
+
+# O passo final do CI de cada servico atualiza 'newTag' com a tag publicada no ECR.
+images:
+  - name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/targeting-image
+    newTag: "1.0"
