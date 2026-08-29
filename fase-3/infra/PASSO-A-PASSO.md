@@ -141,7 +141,7 @@ Ajuste em `terraform.tfvars` se preciso:
 ## Passo 5 — Primeiro apply (encenado)
 
 Os providers `kubernetes`/`helm` só inicializam depois que o cluster existe.
-Por isso o primeiro apply é em duas etapas.
+Por isso o primeiro apply é em três etapas.
 
 ```bash
 # ainda em fase-3/infra/terraform/envs/lab
@@ -154,11 +154,17 @@ terraform apply \
 
 terraform apply
 # yes  -> ECR, RDS x3, ElastiCache, SQS, DynamoDB, add-ons Helm
-#         (metrics-server, ingress-nginx, KEDA, ArgoCD) e a root Application
+#         (metrics-server, ingress-nginx, KEDA, ArgoCD)
 #         (~15-20 min, RDS é o mais lento)
+
+terraform apply -var bootstrap_gitops_root_app=true
+# yes  -> cria a root Application do ArgoCD (kubernetes_manifest).
+#         Separado porque esse recurso exige conexão viva com a API do
+#         cluster já no plan -- só funciona com o EKS + ArgoCD no ar.
+#         Alternativa manual: kubectl apply -f fase-3/gitops/root-app.yaml
 ```
 
-Applies seguintes: só `terraform apply` (uma etapa).
+Applies seguintes: `terraform apply -var bootstrap_gitops_root_app=true`.
 
 ---
 
