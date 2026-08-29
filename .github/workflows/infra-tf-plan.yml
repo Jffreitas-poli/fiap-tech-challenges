@@ -1,0 +1,93 @@
+name: infra-tf-plan
+
+on:
+  pull_request:
+    paths:
+      - "fase-3/infra/terraform/**"
+      - ".github/workflows/infra-tf-*.yml"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: infra-tf-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-2
+  TF_VERSION: "1.9.8"
+  TF_ROOT: fase-3/infra/terraform/envs/lab
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.TF_ROOT }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (AWS Academy static keys)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: terraform fmt
+        working-directory: fase-3/infra/terraform
+        run: terraform fmt -check -recursive
+
+      - name: terraform init
+        run: terraform init -input=false
+
+      - name: terraform validate
+        run: terraform validate -no-color
+
+      - uses: terraform-linters/setup-tflint@v4
+      - name: tflint
+        working-directory: fase-3/infra/terraform
+        run: |
+          tflint --init
+          tflint --recursive -f compact
+
+      - name: checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: fase-3/infra/terraform
+          quiet: true
+          soft_fail: true   # endurecer para false apos o primeiro ciclo de triagem
+
+      - name: terraform plan
+        id: plan
+        run: |
+          set -o pipefail
+          terraform plan -input=false -no-color -lock-timeout=120s -out=tfplan | tee plan.txt
+          {
+            echo 'stdout<<TFPLAN_EOF'
+            tail -c 60000 plan.txt
+            echo 'TFPLAN_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: comment plan on PR
+        uses: actions/github-script@v7
+        env:
+          PLAN: ${{ steps.plan.outputs.stdout }}
+        with:
+          script: |
+            const marker = '<!-- infra-tf-plan:fase-3/lab -->';
+            const body = `${marker}\n#### \`terraform plan\` — \`fase-3/lab\`\n\n<details><summary>ver plan</summary>\n\n\`\`\`\n${process.env.PLAN}\n\`\`\`\n\n</details>`;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number });
+            const mine = comments.find(c => c.body && c.body.includes(marker));
+            if (mine) {
+              await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: mine.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
+            }
