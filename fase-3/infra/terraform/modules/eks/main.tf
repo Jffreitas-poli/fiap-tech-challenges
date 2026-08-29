@@ -35,6 +35,7 @@ resource "aws_eks_node_group" "default" {
   node_role_arn   = var.lab_role_arn
   subnet_ids      = var.subnet_ids
   instance_types  = var.node_instance_types
+  ami_type        = var.node_ami_type
   disk_size       = var.node_disk_size
 
   scaling_config {

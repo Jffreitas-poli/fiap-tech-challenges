@@ -4,9 +4,15 @@ variable "cluster_name" {
 }
 
 variable "cluster_version" {
-  description = "Versao do Kubernetes do control plane."
+  description = "Versao do Kubernetes do control plane. Use uma versao ainda suportada pelo EKS (1.30 saiu de suporte padrao)."
   type        = string
-  default     = "1.30"
+  default     = "1.31"
+}
+
+variable "node_ami_type" {
+  description = "AMI type do managed node group. AL2 foi descontinuado; use AL2023."
+  type        = string
+  default     = "AL2023_x86_64_STANDARD"
 }
 
 variable "subnet_ids" {
