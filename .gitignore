@@ -11,3 +11,21 @@
 /fase-2/evaluation-service/.env
 
 #fase-3
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfplan
+tfplan
+plan.txt
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+# manter os exemplos versionados, ignorar os tfvars reais que contenham segredos
+# (neste projeto os tfvars nao tem segredos, entao terraform.tfvars fica versionado)
+
