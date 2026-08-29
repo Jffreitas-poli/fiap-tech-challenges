@@ -11,7 +11,7 @@ public_subnet_cidrs  = ["10.30.0.0/20", "10.30.16.0/20"]
 private_subnet_cidrs = ["10.30.128.0/20", "10.30.144.0/20"]
 
 lab_role_name        = "LabRole"
-admin_principal_arns = ["arn:aws:iam::361075236043:role/LabRole"]
+admin_principal_arns = []  # NAO inclua a role dos nodes (LabRole)
 
 node_instance_types = ["t3.large"]
 rds_instance_class  = "db.t3.small"

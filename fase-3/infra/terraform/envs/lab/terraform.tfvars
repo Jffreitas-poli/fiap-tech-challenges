@@ -10,9 +10,7 @@ private_subnet_cidrs = ["10.20.128.0/20", "10.20.144.0/20"]
 
 lab_role_name = "LabRole"
 
-admin_principal_arns = [
-  "arn:aws:iam::361075236043:role/LabRole",
-]
+admin_principal_arns = [] # NAO inclua a role dos nodes (LabRole) aqui -- colide com o entry EC2_LINUX
 
 node_instance_types = ["t3.medium"]
 rds_instance_class  = "db.t3.micro"

@@ -19,6 +19,13 @@ resource "helm_release" "metrics_server" {
   version    = var.metrics_server_chart_version
   namespace  = "kube-system"
 
+  # nao bloqueia o apply esperando readiness: metrics-server so fica Ready
+  # depois que os kubelets tem cert serving assinado (access entry EC2_LINUX
+  # + reciclagem dos nodes). O apply nao deve falhar por causa disso.
+  wait            = false
+  timeout         = 600
+  cleanup_on_fail = true
+
   set {
     name  = "args[0]"
     value = "--kubelet-insecure-tls"
@@ -34,6 +41,8 @@ resource "helm_release" "ingress_nginx" {
   version          = var.ingress_nginx_chart_version
   namespace        = "ingress-nginx"
   create_namespace = true
+  timeout          = 600
+  cleanup_on_fail  = true
 
   values = [file(var.ingress_nginx_values_path)]
 
@@ -57,6 +66,8 @@ resource "helm_release" "keda" {
   version          = var.keda_chart_version
   namespace        = "keda"
   create_namespace = true
+  timeout          = 600
+  cleanup_on_fail  = true
 }
 
 resource "helm_release" "argocd" {
@@ -68,6 +79,8 @@ resource "helm_release" "argocd" {
   version          = var.argocd_chart_version
   namespace        = "argocd"
   create_namespace = true
+  timeout          = 900
+  cleanup_on_fail  = true
 
   values = compact([
     yamlencode({
