@@ -1,0 +1,67 @@
+name: infra-tf-apply
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "fase-3/infra/terraform/**"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: ambiente alvo
+        type: choice
+        options: [ lab, prod ]
+        default: lab
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infra-tf-apply-${{ github.event.inputs.environment || 'lab' }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-2
+  TF_VERSION: "1.9.8"
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'lab' }}
+    defaults:
+      run:
+        working-directory: fase-3/infra/terraform/envs/${{ github.event.inputs.environment || 'lab' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (AWS Academy static keys)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: terraform init
+        run: terraform init -input=false
+
+      # No primeiro apply de um ambiente vazio, descomente para encenar os providers:
+      # - name: terraform apply (bootstrap networking + eks)
+      #   run: terraform apply -input=false -auto-approve -lock-timeout=300s -target=module.networking -target=module.eks
+
+      - name: terraform apply
+        run: terraform apply -input=false -auto-approve -lock-timeout=300s
+
+      - name: outputs -> step summary
+        run: |
+          {
+            echo "## Terraform outputs — ${{ github.event.inputs.environment || 'lab' }}"
+            echo ''
+            echo '```json'
+            terraform output -json | jq 'map_values(if .sensitive then "<sensitive>" else .value end)'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

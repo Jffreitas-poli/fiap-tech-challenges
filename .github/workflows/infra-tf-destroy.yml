@@ -1,0 +1,54 @@
+name: infra-tf-destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: ambiente alvo
+        type: choice
+        options: [ lab, prod ]
+        default: lab
+      confirm:
+        description: 'digite DESTROY para confirmar'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infra-tf-apply-${{ github.event.inputs.environment }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-2
+  TF_VERSION: "1.9.8"
+
+jobs:
+  destroy:
+    if: ${{ github.event.inputs.confirm == 'DESTROY' }}
+    runs-on: ubuntu-latest
+    # Environment com Required reviewers configurado no GitHub -> aprovacao manual
+    environment: ${{ github.event.inputs.environment }}
+    defaults:
+      run:
+        working-directory: fase-3/infra/terraform/envs/${{ github.event.inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (AWS Academy static keys)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: terraform init
+        run: terraform init -input=false
+
+      - name: terraform destroy
+        run: terraform destroy -input=false -auto-approve -lock-timeout=300s
