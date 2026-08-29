@@ -50,6 +50,9 @@ resource "aws_eks_node_group" "default" {
 
   tags = merge(var.tags, { Name = "${var.cluster_name}-ng" })
 
+  # nodes precisam do access entry EC2_LINUX ja existente ao subir
+  depends_on = [aws_eks_access_entry.node]
+
   # desired_size e gerenciado pelo Cluster Autoscaler/KEDA em runtime
   lifecycle {
     ignore_changes = [scaling_config[0].desired_size]
@@ -68,11 +71,26 @@ resource "aws_eks_addon" "this" {
 }
 
 ########################################################################
-# Acesso de administracao ao cluster (EKS Access Entries -- nao e IAM)
+# EKS Access Entries (nao e IAM)
 ########################################################################
 
+# Entry EC2_LINUX para a role dos nodes: sem isso, os nodes autenticam
+# fora do grupo system:nodes, o EKS nao assina os CSRs kubelet-serving e
+# metrics-server / kubectl top|logs|exec quebram com "tls: internal error".
+resource "aws_eks_access_entry" "node" {
+  cluster_name  = aws_eks_cluster.this.name
+  principal_arn = var.lab_role_arn
+  type          = "EC2_LINUX"
+}
+
+# Admins humanos. A role dos nodes NUNCA entra aqui (colidiria com o
+# entry EC2_LINUX acima -- um principal so pode ter um entry).
+locals {
+  admin_arns = toset([for a in var.admin_principal_arns : a if a != var.lab_role_arn])
+}
+
 resource "aws_eks_access_entry" "admins" {
-  for_each = toset(var.admin_principal_arns)
+  for_each = local.admin_arns
 
   cluster_name  = aws_eks_cluster.this.name
   principal_arn = each.value
@@ -80,7 +98,7 @@ resource "aws_eks_access_entry" "admins" {
 }
 
 resource "aws_eks_access_policy_association" "admins" {
-  for_each = toset(var.admin_principal_arns)
+  for_each = local.admin_arns
 
   cluster_name  = aws_eks_cluster.this.name
   principal_arn = each.value

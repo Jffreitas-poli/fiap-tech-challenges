@@ -53,8 +53,11 @@ jobs:
       # - name: terraform apply (bootstrap networking + eks)
       #   run: terraform apply -input=false -auto-approve -lock-timeout=300s -target=module.networking -target=module.eks
 
+      - name: terraform plan
+        run: terraform plan -input=false -lock-timeout=300s -no-color -out=tfplan
+
       - name: terraform apply
-        run: terraform apply -input=false -auto-approve -lock-timeout=300s
+        run: terraform apply -input=false -lock-timeout=300s tfplan
 
       - name: outputs -> step summary
         run: |
