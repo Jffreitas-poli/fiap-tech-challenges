@@ -30,7 +30,7 @@ terraform/
 ```bash
 cd fase-3/infra/bootstrap
 terraform init
-terraform apply            # cria s3://tc-fiap-tfstate-047719652987 e a tabela tc-fiap-tflock
+terraform apply            # cria s3://tc-fiap-tfstate-361075236043 e a tabela tc-fiap-tflock
 ```
 
 Alternativa em AWS CLI: ver a seção "Bootstrap" no plano
@@ -45,23 +45,28 @@ existe, então o primeiro apply é feito em dois passos:
 cd fase-3/infra/terraform/envs/lab
 cp terraform.tfvars.example terraform.tfvars   # já vem versionado; ajuste se necessário
 terraform init
-terraform apply -target=module.networking -target=module.eks   # VPC + cluster + nodes
-terraform apply                                                 # ecr, dbs, addons, argocd, root-app
+terraform apply -target=module.networking -target=module.eks    # VPC + cluster + nodes
+terraform apply                                                  # ecr, dbs, addons, argocd
+terraform apply -var bootstrap_gitops_root_app=true             # root Application do ArgoCD
 ```
 
-Applies seguintes: só `terraform apply`.
+O 3º apply fica separado porque `kubernetes_manifest.root_app` exige conexão
+viva com a API do cluster já no `plan` — só roda depois que o EKS e o ArgoCD
+estão no ar. Alternativa manual: `kubectl apply -f fase-3/gitops/root-app.yaml`.
+
+Applies seguintes: `terraform apply -var bootstrap_gitops_root_app=true`.
 
 ### Ordem de dependências (resolvida pelo grafo do Terraform)
 
 1. `networking` → 2. `eks` → 3. `ecr` (paralelo) → 4. `rds` / `elasticache` /
 `sqs` / `dynamodb` (SGs liberam 5432/6379 só para o SG dos nodes) →
-5. `addons` (Helm) → 6. `kubernetes_manifest.root_app` (ArgoCD passa a
-sincronizar `fase-3/gitops/`).
+5. `addons` (Helm) → 6. `kubernetes_manifest.root_app` (3º apply; ArgoCD passa
+a sincronizar `fase-3/gitops/`).
 
 ## 3. Pós-apply
 
 ```bash
-aws eks update-kubeconfig --name tc-eks --region us-east-2
+aws eks update-kubeconfig --name tc-eks --region us-east-1
 
 # Criar os Secrets do K8s a partir dos outputs (enquanto não há External Secrets):
 cd fase-3/infra/terraform/envs/lab
@@ -80,12 +85,12 @@ tem secret — usa configmap + role dos nodes.
 
 ```bash
 # AWS
-aws eks describe-cluster --name tc-eks --region us-east-2 --query 'cluster.status'
-aws ecr describe-repositories --region us-east-2 --query 'repositories[].repositoryName'
-aws rds describe-db-instances --region us-east-2 --query 'DBInstances[].DBInstanceIdentifier'
-aws elasticache describe-replication-groups --region us-east-2 --query 'ReplicationGroups[].ReplicationGroupId'
-aws sqs get-queue-url --queue-name tc-sqs --region us-east-2
-aws dynamodb describe-table --table-name tc-dynamo --region us-east-2 --query 'Table.TableStatus'
+aws eks describe-cluster --name tc-eks --region us-east-1 --query 'cluster.status'
+aws ecr describe-repositories --region us-east-1 --query 'repositories[].repositoryName'
+aws rds describe-db-instances --region us-east-1 --query 'DBInstances[].DBInstanceIdentifier'
+aws elasticache describe-replication-groups --region us-east-1 --query 'ReplicationGroups[].ReplicationGroupId'
+aws sqs get-queue-url --queue-name tc-sqs --region us-east-1
+aws dynamodb describe-table --table-name tc-dynamo --region us-east-1 --query 'Table.TableStatus'
 
 # Cluster
 kubectl get nodes

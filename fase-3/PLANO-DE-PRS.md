@@ -30,7 +30,7 @@ Nenhum merge aplica nada na AWS — o primeiro `terraform apply` é manual, ver
 `fase-3/infra/bootstrap/**`
 
 Cria (quando aplicado à parte, fora do CI) o bucket
-`s3://tc-fiap-tfstate-047719652987` e a tabela de lock `tc-fiap-tflock`, ambos
+`s3://tc-fiap-tfstate-361075236043` e a tabela de lock `tc-fiap-tflock`, ambos
 com `prevent_destroy`. State local (é o que cria o backend).
 
 **Validação:** `cd fase-3/infra/bootstrap && terraform fmt -check && terraform init -backend=false && terraform validate`

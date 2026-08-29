@@ -17,6 +17,7 @@ locals {
     Environment = local.env
     ManagedBy   = "terraform"
     Repo        = "NyEstevo/fiap-tech-challenges"
+    Account     = var.account_id
   }
 
   # database-per-service: identifier da instancia RDS -> nome do banco
@@ -197,14 +198,21 @@ module "dynamodb" {
 module "addons" {
   source = "../../modules/addons"
 
-  cluster_name              = module.eks.cluster_name
   ingress_nginx_values_path = local.ingress_nginx_values_path
 
   depends_on = [module.eks]
 }
 
 # Application "app-of-apps" -- ArgoCD passa a sincronizar fase-3/gitops/
+#
+# kubernetes_manifest exige conexao viva com a API do cluster JA no plan.
+# Por isso fica atras de uma flag: no 1o apply (cluster ainda nao existe) e
+# no CI ela e false. Depois que o cluster + ArgoCD estao no ar, rode:
+#   terraform apply -var bootstrap_gitops_root_app=true
+# (ou, alternativa manual: kubectl apply -f fase-3/gitops/root-app.yaml)
 resource "kubernetes_manifest" "root_app" {
+  count = var.bootstrap_gitops_root_app ? 1 : 0
+
   manifest = yamldecode(file(local.gitops_root_app_path))
 
   depends_on = [module.addons]

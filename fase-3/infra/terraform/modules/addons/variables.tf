@@ -1,8 +1,3 @@
-variable "cluster_name" {
-  description = "Nome do cluster EKS (usado apenas para dependencia/legibilidade)."
-  type        = string
-}
-
 variable "enable_metrics_server" {
   type    = bool
   default = true

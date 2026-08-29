@@ -36,5 +36,5 @@ permissions:
 - uses: aws-actions/configure-aws-credentials@v4
   with:
     role-to-assume: ${{ vars.AWS_GHA_ROLE_ARN }}   # module.gha_oidc.role_arn
-    aws-region: us-east-2
+    aws-region: us-east-1
 ```
