@@ -17,6 +17,7 @@ locals {
     Environment = local.env
     ManagedBy   = "terraform"
     Repo        = "NyEstevo/fiap-tech-challenges"
+    Account     = var.account_id
   }
 
   # database-per-service: identifier da instancia RDS -> nome do banco
@@ -197,7 +198,6 @@ module "dynamodb" {
 module "addons" {
   source = "../../modules/addons"
 
-  cluster_name              = module.eks.cluster_name
   ingress_nginx_values_path = local.ingress_nginx_values_path
 
   depends_on = [module.eks]
