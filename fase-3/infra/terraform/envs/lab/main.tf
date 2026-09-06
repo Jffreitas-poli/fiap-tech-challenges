@@ -288,9 +288,14 @@ resource "null_resource" "ingress_lb_cleanup" {
   depends_on = [module.addons]
 }
 
-# Credenciais estaticas da sessao para o External Secrets Operator.
-# Sob o Academy nao ha IRSA e o pod do ESO nao alcanca o IMDS do node,
-# entao o ClusterSecretStore aponta para este Secret (auth.secretRef).
+# Credenciais estaticas da sessao para o External Secrets Operator e para os
+# pods de aplicacao que falam direto com a AWS (analytics/evaluation -> SQS,
+# DynamoDB). Sob o Academy nao ha IRSA e o pod nao alcanca o IMDS do node,
+# entao:
+#  - o ClusterSecretStore do ESO aponta para o Secret aws-static-creds
+#    (ns external-secrets, chaves kebab-case exigidas pelo auth.secretRef);
+#  - os deployments em 'toggle' recebem o Secret aws-session-creds via envFrom
+#    (chaves no formato AWS_* que o SDK/boto3 le da cadeia padrao).
 # Recriado a cada apply (o session token expira ~4h; o apply e re-rodado
 # a cada sessao de lab).
 resource "null_resource" "eso_aws_creds" {
@@ -312,6 +317,12 @@ resource "null_resource" "eso_aws_creds" {
         --from-literal=access-key-id="$${AWS_ACCESS_KEY_ID}" \
         --from-literal=secret-access-key="$${AWS_SECRET_ACCESS_KEY}" \
         --from-literal=session-token="$${AWS_SESSION_TOKEN}" \
+        --dry-run=client -o yaml | kubectl apply -f -
+      kubectl create namespace toggle --dry-run=client -o yaml | kubectl apply -f -
+      kubectl -n toggle create secret generic aws-session-creds \
+        --from-literal=AWS_ACCESS_KEY_ID="$${AWS_ACCESS_KEY_ID}" \
+        --from-literal=AWS_SECRET_ACCESS_KEY="$${AWS_SECRET_ACCESS_KEY}" \
+        --from-literal=AWS_SESSION_TOKEN="$${AWS_SESSION_TOKEN}" \
         --dry-run=client -o yaml | kubectl apply -f -
     EOT
   }
