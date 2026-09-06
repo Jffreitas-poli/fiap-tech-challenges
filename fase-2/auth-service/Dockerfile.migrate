@@ -1,9 +1,25 @@
 # Imagem de migration do auth-service (golang-migrate).
-# Publicada no ECR tech-challenge/auth-migrate-image com a mesma tag (commit SHA)
-# da imagem da aplicacao. Consumida pelo Job PreSync do ArgoCD.
-FROM migrate/migrate:v4.18.1
+# Build a partir do fonte com Go 1.25 e SO o driver postgres (-tags postgres).
+# A imagem oficial migrate/migrate:v4.x embute todos os drivers (spanner,
+# mysql, ...) e por isso carrega grpc/x-crypto/pgx/stdlib vulneraveis; aqui
+# so entra github.com/lib/pq + stdlib do Go 1.25.
+# Publicada no ECR tech-challenge/auth-migrate-image com a mesma tag (commit
+# SHA) da imagem da aplicacao. Consumida pelo Job PreSync do ArgoCD.
+FROM golang:1.25-alpine AS builder
 
+RUN apk add --no-cache git
+WORKDIR /src
+RUN git clone --depth 1 --branch v4.19.1 https://github.com/golang-migrate/migrate.git .
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" \
+      -tags 'postgres' -o /out/migrate ./cmd/migrate
+
+FROM alpine:3.21
+
+RUN apk add --no-cache ca-certificates \
+    && adduser -D -u 1000 app
+USER app
+COPY --from=builder /out/migrate /usr/local/bin/migrate
 COPY migrations /migrations
 
-# entrypoint padrao da imagem ja e "migrate"; o Job passa:
-#   -path=/migrations -database=$(DATABASE_URL) up
+ENTRYPOINT ["migrate"]
+# o Job passa: -path=/migrations -database=$(DATABASE_URL) up
