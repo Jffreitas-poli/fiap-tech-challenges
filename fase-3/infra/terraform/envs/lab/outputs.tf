@@ -58,5 +58,6 @@ output "app_secret_names" {
   value = {
     auth       = aws_secretsmanager_secret.auth_app.name
     evaluation = aws_secretsmanager_secret.evaluation_app.name
+    analytics  = aws_secretsmanager_secret.analytics_app.name
   }
 }

@@ -185,7 +185,8 @@ Não é mais passo manual. O `terraform apply` publica no **AWS Secrets Manager*
 |---|---|---|
 | `tc-rds-{auth,flag,targeting}-credentials` | `{username,password,host,url,...}` | módulo `rds` |
 | `tc-auth-app` | `{MASTER_KEY}` | `random_password` |
-| `tc-evaluation-app` | `{SERVICE_API_KEY}` | `random_password` |
+| `tc-evaluation-app` | `{SERVICE_API_KEY, REDIS_URL, AWS_SQS_URL, AWS_REGION}` | `random_password` + módulos `elasticache`/`sqs` |
+| `tc-analytics-app` | `{AWS_SQS_URL, AWS_DYNAMODB_TABLE, AWS_REGION}` | módulos `sqs`/`dynamodb` |
 
 O **External Secrets Operator** (instalado pelo módulo `addons`) + o
 `ClusterSecretStore` `aws-secrets-manager` (ArgoCD app `platform`) leem esses
@@ -196,11 +197,14 @@ Conferir:
 
 ```bash
 kubectl -n toggle get externalsecrets        # SecretSynced=True
-kubectl -n toggle get secret auth-secret flag-secret targeting-secret evaluation-secret
+kubectl -n toggle get secret auth-secret flag-secret targeting-secret evaluation-secret analytics-secret
 ```
 
-- `evaluation-service` pega `REDIS_URL` do **configmap** (não é secret).
-- `analytics-service` **não** tem secret — configmap + role dos nodes.
+- Os `configmap.yaml` só guardam valor **estático** (`PORT`, URLs de serviço
+  in-cluster). `REDIS_URL` / `AWS_SQS_URL` / `AWS_DYNAMODB_TABLE` / `AWS_REGION`
+  vêm do ASM (eram valores da fase-2, `us-east-2`, no configmap).
+- `analytics-deployment` ganha `secretRef: analytics-secret` no `envFrom` via
+  patch no kustomization (na fase-2 só tinha `configMapRef`).
 - `MASTER_KEY` / `SERVICE_API_KEY` são gerados; para chamadas admin, leia com
   `aws secretsmanager get-secret-value --secret-id tc-auth-app`. Registrar a
   `SERVICE_API_KEY` na tabela `api_keys` do auth é passo de bootstrap de app,

@@ -225,13 +225,35 @@ resource "random_password" "evaluation_api_key" {
 
 resource "aws_secretsmanager_secret" "evaluation_app" {
   name                    = "tc-evaluation-app"
-  description             = "Segredos de aplicacao do evaluation-service (ToggleMaster)."
+  description             = "Segredos + config runtime do evaluation-service (ToggleMaster)."
   recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "evaluation_app" {
-  secret_id     = aws_secretsmanager_secret.evaluation_app.id
-  secret_string = jsonencode({ SERVICE_API_KEY = random_password.evaluation_api_key.result })
+  secret_id = aws_secretsmanager_secret.evaluation_app.id
+  # SERVICE_API_KEY e segredo; REDIS_URL/AWS_* sao config de ambiente derivada
+  # dos modulos -- centralizada aqui para o configmap so guardar valor estatico.
+  secret_string = jsonencode({
+    SERVICE_API_KEY = random_password.evaluation_api_key.result
+    REDIS_URL       = module.elasticache.redis_url
+    AWS_SQS_URL     = module.sqs.queue_url
+    AWS_REGION      = var.region
+  })
+}
+
+resource "aws_secretsmanager_secret" "analytics_app" {
+  name                    = "tc-analytics-app"
+  description             = "Config runtime do analytics-service (ToggleMaster)."
+  recovery_window_in_days = 0
+}
+
+resource "aws_secretsmanager_secret_version" "analytics_app" {
+  secret_id = aws_secretsmanager_secret.analytics_app.id
+  secret_string = jsonencode({
+    AWS_SQS_URL        = module.sqs.queue_url
+    AWS_DYNAMODB_TABLE = module.dynamodb.table_name
+    AWS_REGION         = var.region
+  })
 }
 
 ########################################################################
