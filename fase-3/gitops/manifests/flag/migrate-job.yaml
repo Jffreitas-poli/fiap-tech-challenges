@@ -1,0 +1,53 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: flag-migrate
+  namespace: toggle
+  annotations:
+    # roda uma vez por sync do ArgoCD, ANTES do rollout do Deployment
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app: flag
+        job: migrate
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      initContainers:
+        - name: wait-for-db
+          image: postgres:16-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -d "$DATABASE_URL"; do
+                echo "aguardando o banco..."; sleep 2;
+              done
+          envFrom:
+            - secretRef:
+                name: flag-secret
+      containers:
+        - name: migrate
+          # mesma imagem da aplicacao (Alembic + alembic/ ja embarcados);
+          # o CI reescreve name+tag via 'kustomize edit set image'
+          image: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/flag-image
+          command: ["alembic", "upgrade", "head"]
+          workingDir: /app
+          envFrom:
+            - secretRef:
+                name: flag-secret
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "10m"
+            limits:
+              memory: "128Mi"
+              cpu: "50m"
