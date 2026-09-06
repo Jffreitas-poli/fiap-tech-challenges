@@ -8,12 +8,13 @@ resources:
   - ../../../../fase-2/targeting-service/k8s/configmap.yaml
   - ../../../../fase-2/targeting-service/k8s/deployment.yaml
   - ../../../../fase-2/targeting-service/k8s/service.yaml
+  - migrate-job.yaml
 
 namespace: toggle
 
-# 'name' casa com a imagem dos manifests da Fase 2 (ECR antigo); newName
-# aponta para o ECR desta conta. O CI atualiza newTag (commit SHA) via
-# 'kustomize edit set image'.
+# 'name' casa com a imagem dos manifests da Fase 2 (ECR antigo). A mesma
+# entrada reescreve o Deployment e o Job de migration. O CI atualiza newTag
+# (commit SHA) via 'kustomize edit set image'.
 images:
   - name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/targeting-image
     newName: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/targeting-image

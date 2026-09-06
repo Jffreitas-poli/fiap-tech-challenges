@@ -8,6 +8,7 @@ resources:
   - ../../../../fase-2/auth-service/k8s/configmap.yaml
   - ../../../../fase-2/auth-service/k8s/deployment.yaml
   - ../../../../fase-2/auth-service/k8s/service.yaml
+  - migrate-job.yaml
 
 namespace: toggle
 
@@ -17,4 +18,6 @@ namespace: toggle
 images:
   - name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/auth-image
     newName: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/auth-image
+    newTag: "1.0"
+  - name: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/auth-migrate-image
     newTag: "1.0"
