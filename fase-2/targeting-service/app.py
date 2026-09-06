@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 # Carrega .env para desenvolvimento local
-load_dotenv() 
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -43,15 +43,15 @@ def require_auth(f):
         auth_header = request.headers.get("Authorization")
         if not auth_header:
             return jsonify({"error": "Authorization header obrigatório"}), 401
-        
+
         try:
             validate_url = f"{AUTH_SERVICE_URL}/validate"
             response = requests.get(validate_url, headers={"Authorization": auth_header}, timeout=3)
-            
+
             if response.status_code != 200:
                 log.warning(f"Falha na validação da chave (status: {response.status_code})")
                 return jsonify({"error": "Chave de API inválida"}), 401
-        
+
         except requests.exceptions.Timeout:
             log.error("Timeout ao conectar com o auth-service")
             return jsonify({"error": "Serviço de autenticação indisponível (timeout)"}), 504 # Gateway Timeout
@@ -75,11 +75,11 @@ def create_rule():
     data = request.get_json()
     if not data or 'flag_name' not in data or 'rules' not in data:
         return jsonify({"error": "'flag_name' e 'rules' (JSON) são obrigatórios"}), 400
-    
+
     flag_name = data['flag_name']
     rules_obj = data['rules'] # O objeto JSON
     is_enabled = data.get('is_enabled', True)
-    
+
     conn = None
     cur = None
     try:
@@ -137,31 +137,31 @@ def update_rule(flag_name):
 
     fields = []
     values = []
-    
+
     if 'rules' in data:
         fields.append("rules = %s")
         values.append(Json(data['rules'])) # Serializa o JSON
     if 'is_enabled' in data:
         fields.append("is_enabled = %s")
         values.append(data['is_enabled'])
-    
+
     if not fields:
         return jsonify({"error": "Pelo menos um campo ('rules', 'is_enabled') é obrigatório"}), 400
-    
+
     values.append(flag_name) # Adiciona o 'flag_name' para a cláusula WHERE
-    
+
     query = f"UPDATE targeting_rules SET {', '.join(fields)} WHERE flag_name = %s RETURNING *"
-    
+
     conn = None
     cur = None
     try:
         conn = pool.getconn()
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute(query, tuple(values))
-        
+
         if cur.rowcount == 0:
             return jsonify({"error": "Regra não encontrada"}), 404
-            
+
         updated_rule = cur.fetchone()
         conn.commit()
         log.info(f"Regra para '{flag_name}' atualizada com sucesso.")
@@ -184,10 +184,10 @@ def delete_rule(flag_name):
         conn = pool.getconn()
         cur = conn.cursor()
         cur.execute("DELETE FROM targeting_rules WHERE flag_name = %s", (flag_name,))
-        
+
         if cur.rowcount == 0:
             return jsonify({"error": "Regra não encontrada"}), 404
-            
+
         conn.commit()
         log.info(f"Regra para '{flag_name}' deletada com sucesso.")
         return "", 204 # 204 No Content

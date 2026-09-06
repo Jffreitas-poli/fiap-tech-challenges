@@ -23,10 +23,10 @@ Este é o serviço de autenticação do projeto ToggleMaster. Ele é responsáve
     ```.env
     # String de conexão do seu banco de dados PostgreSQL
     DATABASE_URL="postgres://SEU_USUARIO:SUA_SENHA@localhost:5432/auth_db"
-    
+
     # Porta que o serviço irá rodar
     PORT="8001"
-    
+
     # Chave mestra para criar novas chaves de API
     MASTER_KEY="REDACTED"
     ```
@@ -60,7 +60,7 @@ curl -X POST http://localhost:8001/admin/keys \
 -H "Content-Type: application/json" \
 -H "Authorization: Bearer REDACTED" \
 -d '{"name": "meu-primeiro-servico"}'
-``` 
+```
 
 Saída esperada (A SUA CHAVE SERÁ DIFERENTE):
 

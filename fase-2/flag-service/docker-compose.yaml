@@ -15,7 +15,7 @@ services:
     depends_on:
       flag-db:
         condition: service_healthy
-    
+
   flag-db:
     container_name: flag-db
     image: postgres:13
@@ -37,7 +37,7 @@ services:
       - flag-data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
-      - tech-challenge-network 
+      - tech-challenge-network
 
 volumes:
   flag-data:

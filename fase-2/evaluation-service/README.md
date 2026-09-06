@@ -41,23 +41,23 @@ Ele funciona da seguinte forma:
     ```.env
     # Porta que este serviço irá rodar
     PORT="8004"
-    
+
     # URL do seu Redis local
     REDIS_URL="redis://localhost:6379"
-    
+
     # URLs dos outros serviços
     FLAG_SERVICE_URL="http://localhost:8002"
     TARGETING_SERVICE_URL="http://localhost:8003"
-    
+
     # Chave de API que você criou no passo 2
     SERVICE_API_KEY="SUA_CHAVE_DE_SERVICO"
-    
+
     # --- Configuração da AWS (Obrigatório para o desafio) ---
     # Cole a URL da fila SQS que você criou no console da AWS
     AWS_SQS_URL="[https://sqs.us-east-1.amazonaws.com/123456789012/sua-fila](https://sqs.us-east-1.amazonaws.com/123456789012/sua-fila)"
-    
+
     # Região da sua fila SQS
-    AWS_REGION="us-east-1" 
+    AWS_REGION="us-east-1"
     ```
 
 4.  **Instale as Dependências:**
@@ -100,4 +100,3 @@ Saída (exemplo): `{"flag_name":"enable-new-dashboard","user_id":"user-abc","res
 **3. Verifique o Cache:** Execute o mesmo comando duas vezes seguidas. Na segunda vez, você verá um log "Cache HIT" no terminal do `evaluation-service`.
 
 **4. Verifique a Fila SQS:** Após fazer as chamadas acima, vá até o console da AWS, abra sua fila SQS e verifique se as mensagens (`EvaluationEvent`) estão chegando.
-

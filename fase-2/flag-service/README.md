@@ -26,10 +26,10 @@ Este é o serviço de CRUD (Create, Read, Update, Delete) do projeto ToggleMaste
     ```.env
     # String de conexão do seu banco de dados PostgreSQL
     DATABASE_URL="postgres://SEU_USUARIO:SUA_SENHA@localhost:5432/flags_db"
-    
+
     # Porta que este serviço (flag-service) irá rodar
     PORT="8002"
-    
+
     # URL do auth-service (que deve estar rodando na porta 8001)
     AUTH_SERVICE_URL="http://localhost:8001"
     ```
