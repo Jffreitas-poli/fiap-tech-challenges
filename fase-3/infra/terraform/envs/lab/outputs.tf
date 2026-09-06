@@ -52,3 +52,11 @@ output "rds_database_urls" {
   value       = { for k, m in module.rds : k => m.database_url }
   sensitive   = true
 }
+
+output "app_secret_names" {
+  description = "Secrets de aplicacao (nao-RDS) no Secrets Manager, consumidos pelo ESO."
+  value = {
+    auth       = aws_secretsmanager_secret.auth_app.name
+    evaluation = aws_secretsmanager_secret.evaluation_app.name
+  }
+}

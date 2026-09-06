@@ -195,6 +195,46 @@ module "dynamodb" {
 }
 
 ########################################################################
+# Secrets Manager :: segredos de aplicacao (nao-RDS)
+# O modulo rds ja publica tc-rds-<svc>-credentials. Aqui ficam os
+# segredos de app: MASTER_KEY (auth) e SERVICE_API_KEY (evaluation).
+# O External Secrets Operator le estes + os do rds e materializa o
+# Secret <svc>-secret no namespace toggle.
+########################################################################
+
+resource "random_password" "auth_master_key" {
+  length  = 32
+  special = false
+}
+
+resource "aws_secretsmanager_secret" "auth_app" {
+  name                    = "tc-auth-app"
+  description             = "Segredos de aplicacao do auth-service (ToggleMaster)."
+  recovery_window_in_days = 0
+}
+
+resource "aws_secretsmanager_secret_version" "auth_app" {
+  secret_id     = aws_secretsmanager_secret.auth_app.id
+  secret_string = jsonencode({ MASTER_KEY = random_password.auth_master_key.result })
+}
+
+resource "random_password" "evaluation_api_key" {
+  length  = 40
+  special = false
+}
+
+resource "aws_secretsmanager_secret" "evaluation_app" {
+  name                    = "tc-evaluation-app"
+  description             = "Segredos de aplicacao do evaluation-service (ToggleMaster)."
+  recovery_window_in_days = 0
+}
+
+resource "aws_secretsmanager_secret_version" "evaluation_app" {
+  secret_id     = aws_secretsmanager_secret.evaluation_app.id
+  secret_string = jsonencode({ SERVICE_API_KEY = random_password.evaluation_api_key.result })
+}
+
+########################################################################
 # Add-ons de cluster (Helm)  +  bootstrap do GitOps
 ########################################################################
 
