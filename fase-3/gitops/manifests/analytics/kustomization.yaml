@@ -2,8 +2,10 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 # Reaproveita os manifests da Fase 2 sem duplicar.
-# secrets.yaml e DELIBERADAMENTE omitido (credenciais commitadas em base64);
-# o Secret e criado a partir do 'terraform output' do modulo rds.
+# analytics-service nao tem segredo, mas AWS_SQS_URL / AWS_DYNAMODB_TABLE /
+# AWS_REGION do configmap da fase-2 apontam para a conta/regiao antiga
+# (us-east-2). Esses valores vem do Secrets Manager via analytics-secret
+# (externalsecret.yaml), adicionado ao envFrom pelo patch abaixo.
 # analytics-service usa SQS + DynamoDB (schemaless) -> sem Job de migration.
 resources:
   - ../../../../fase-2/analytics-service/k8s/configmap.yaml
@@ -12,8 +14,32 @@ resources:
   - ../../../../fase-2/analytics-service/k8s/hpa.yaml
   - ../../../../fase-2/analytics-service/k8s/kedaauthentication.yaml
   - ../../../../fase-2/analytics-service/k8s/scaledobject.yaml
+  - externalsecret.yaml
 
 namespace: toggle
+
+patches:
+  # tira os valores obsoletos do configmap
+  - target:
+      kind: ConfigMap
+      name: analytics-configmap
+    patch: |
+      - op: remove
+        path: /data/AWS_SQS_URL
+      - op: remove
+        path: /data/AWS_DYNAMODB_TABLE
+      - op: remove
+        path: /data/AWS_REGION
+  # o deployment da fase-2 so tem configMapRef -> adiciona o secretRef
+  - target:
+      kind: Deployment
+      name: analytics-deployment
+    patch: |
+      - op: add
+        path: /spec/template/spec/containers/0/envFrom/-
+        value:
+          secretRef:
+            name: analytics-secret
 
 # 'name' casa com a imagem dos manifests da Fase 2 (ECR antigo). O CI atualiza
 # newTag (commit SHA) via 'kustomize edit set image'.
