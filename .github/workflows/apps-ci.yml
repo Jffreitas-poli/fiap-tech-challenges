@@ -6,7 +6,7 @@ on:
       - "fase-2/**"
       - ".github/workflows/apps-ci.yml"
   push:
-    branches: [ main ]
+    branches: [ main, lab ]
     paths:
       - "fase-2/**"
       - ".github/workflows/apps-ci.yml"
@@ -197,6 +197,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: lab            # ArgoCD observa 'lab'; o bump vai pra ca
           fetch-depth: 0
 
       - name: instala kustomize
@@ -223,7 +224,10 @@ jobs:
             )
           done
 
-      - name: commit + push
+      # Publica o bump na branch 'lab', que o ArgoCD observa. 'lab' nao e
+      # protegida -> push direto do bot funciona. 'main' segue protegida e
+      # so recebe via PR (promocao manual). Sem mexer em branch protection.
+      - name: commit + push (lab)
         run: |
           set -euo pipefail
           if git diff --quiet; then
@@ -234,5 +238,5 @@ jobs:
           svcs=$(echo '${{ needs.detect.outputs.services }}' | jq -r 'join(", ")')
           git add fase-3/gitops/manifests
           git commit -m "cd(apps): bump ${svcs} -> ${GITHUB_SHA:0:7} [skip ci]"
-          git pull --rebase origin main
-          git push origin HEAD:main
+          git pull --rebase origin lab
+          git push origin HEAD:lab
