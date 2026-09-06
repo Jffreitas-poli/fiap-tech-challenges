@@ -66,6 +66,9 @@ jobs:
         with:
           terraform_version: ${{ env.TF_VERSION }}
 
+      # necessario para o null_resource.root_app (kubectl apply do app-of-apps)
+      - uses: azure/setup-kubectl@v4
+
       - name: terraform init
         run: terraform init -input=false
 

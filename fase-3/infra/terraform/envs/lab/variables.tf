@@ -11,9 +11,9 @@ variable "account_id" {
 }
 
 variable "bootstrap_gitops_root_app" {
-  description = "Cria o kubernetes_manifest da root Application do ArgoCD. Deixe false no 1o apply/CI (o cluster ainda nao existe); ligue depois que o cluster + ArgoCD estiverem no ar."
+  description = "Aplica a root Application (app-of-apps) do ArgoCD via kubectl no apply. Default true; passe false so para pular esse passo (ex.: debug do resto do grafo)."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "cluster_name" {
