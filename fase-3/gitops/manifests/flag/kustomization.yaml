@@ -18,4 +18,4 @@ namespace: toggle
 images:
 - name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/flag-image
   newName: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/flag-image
-  newTag: ba5ebbf58d510247bec4b7d69ae00749bea907e8
+  newTag: 8750fe531b1d8fb20d9504d6d57f9bec5c75ce69
