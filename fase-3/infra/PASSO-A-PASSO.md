@@ -193,10 +193,27 @@ O **External Secrets Operator** (instalado pelo módulo `addons`) + o
 valores e materializam o Secret `<svc>-secret` no namespace `toggle` — o mesmo
 nome que cada `deployment.yaml` referencia em `envFrom`. Sem `kubectl create secret`.
 
+O ESO autentica na AWS com **chaves estáticas da sessão** (não há IRSA no
+Academy e o pod não alcança o IMDS do node). O `terraform apply` cria o Secret
+`aws-static-creds` no namespace `external-secrets` a partir das env vars
+`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_SESSION_TOKEN` do Passo 4
+(`null_resource.eso_aws_creds`). **O session token expira ~4h** — quando os
+`ExternalSecret` pararem de sincronizar, re-rode o `infra-tf-apply` (recria o
+Secret) ou:
+
+```bash
+kubectl -n external-secrets create secret generic aws-static-creds \
+  --from-literal=access-key-id="$AWS_ACCESS_KEY_ID" \
+  --from-literal=secret-access-key="$AWS_SECRET_ACCESS_KEY" \
+  --from-literal=session-token="$AWS_SESSION_TOKEN" \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
 Conferir:
 
 ```bash
-kubectl -n toggle get externalsecrets        # SecretSynced=True
+kubectl get clustersecretstore aws-secrets-manager     # STATUS Valid
+kubectl -n toggle get externalsecrets                  # SecretSynced=True
 kubectl -n toggle get secret auth-secret flag-secret targeting-secret evaluation-secret analytics-secret
 ```
 
