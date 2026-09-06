@@ -30,7 +30,10 @@ patches:
         path: /data/AWS_DYNAMODB_TABLE
       - op: remove
         path: /data/AWS_REGION
-  # o deployment da fase-2 so tem configMapRef -> adiciona o secretRef
+  # o deployment da fase-2 so tem configMapRef -> adiciona os secretRef.
+  # aws-session-creds (chaves estaticas da sessao) e criado pelo
+  # null_resource.eso_aws_creds no terraform; sem IRSA/IMDS no Academy, e a
+  # unica fonte de credencial AWS para o worker SQS + DynamoDB.
   - target:
       kind: Deployment
       name: analytics-deployment
@@ -40,6 +43,11 @@ patches:
         value:
           secretRef:
             name: analytics-secret
+      - op: add
+        path: /spec/template/spec/containers/0/envFrom/-
+        value:
+          secretRef:
+            name: aws-session-creds
 
 # 'name' casa com a imagem dos manifests da Fase 2 (ECR antigo). O CI atualiza
 # newTag (commit SHA) via 'kustomize edit set image'.

@@ -17,7 +17,7 @@ variable "bootstrap_gitops_root_app" {
 }
 
 variable "enable_external_secrets_creds" {
-  description = "Cria o Secret aws-static-creds (chaves da sessao) que o ClusterSecretStore do ESO usa. Precisa das env vars AWS_* no ambiente do apply."
+  description = "Cria os Secrets com as chaves da sessao: aws-static-creds (ns external-secrets) para o ClusterSecretStore do ESO e aws-session-creds (ns toggle) para os pods analytics/evaluation que falam direto com SQS/DynamoDB. Precisa das env vars AWS_* no ambiente do apply."
   type        = bool
   default     = true
 }
