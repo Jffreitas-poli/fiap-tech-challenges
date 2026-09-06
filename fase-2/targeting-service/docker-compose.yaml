@@ -24,7 +24,7 @@ services:
     ports:
       - "5433:5432"
     environment:
-      - POSTGRES_DB=${DB_NAME_TARGETING_SERVICE}                                       
+      - POSTGRES_DB=${DB_NAME_TARGETING_SERVICE}
       - POSTGRES_USER=${DB_USER_TARGETING_SERVICE}
       - POSTGRES_PASSWORD=${DB_PASSWORD_TARGETING_SERVICE}
     healthcheck:

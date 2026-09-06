@@ -63,7 +63,7 @@ O ToggleMaster é considerado um monolito por concentrar toda a sua lógica de n
 - **IV Backing Services:** No `app.py`, as variáveis são lidas no nível do módulo (fora de qualquer função), o que significa que a conexão é configurada em tempo de importação, não em tempo de execução. Trocar o banco exige reinicialização.
 O `docker-compose.yaml` define as credenciais em texto plano, sem uso de secrets ou referências externas.
 - **V Build,Release, Run:** O `volumes: - .:/app` no `docker-compose.yaml` é a evidência mais clara: ele monta o código-fonte diretamente no container em runtime, colapsando as etapas de build e run em uma só. Não há artefato de build separado, nem etapa de release com configuração aplicada.
-- **VI Processes:** 
+- **VI Processes:**
     ```bash
     # ❌ Estado compartilhado em variáveis globais de módulo
     DB_HOST = os.getenv("DB_HOST")
@@ -77,7 +77,7 @@ O `docker-compose.yaml` define as credenciais em texto plano, sem uso de secrets
 - **IX Disposability:** A aplicação apresenta inicialização rápida, porém ainda carece de mecanismos mais robustos para encerramento e liberação adequada de recursos.
 - **X Dev/prod parity:** Melhor separação entre ambientes de desenvolvimento e produção respeitando o uso do mesmo conjunto de ferramentas e serviços sempre que possível.
 - **XI Logs:** Os logs ainda não são tratados como fluxo contínuo de eventos, e não há integração com sistemas de observabilidade, como Amazon CloudWatch.
-- **XII Admin Processes:** 
+- **XII Admin Processes:**
     ```bash
     # ❌ init-db deveria ser pontual, não automático no start
     flask init-db

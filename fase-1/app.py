@@ -59,10 +59,10 @@ def create_flag():
     data = request.get_json()
     if not data or 'name' not in data:
         return jsonify({"error": "O campo 'name' é obrigatório"}), 400
-    
+
     name = data['name']
     is_enabled = data.get('is_enabled', False)
-    
+
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -77,7 +77,7 @@ def create_flag():
             cur.close()
         if 'conn' in locals() and not conn.closed:
             conn.close()
-            
+
     return jsonify({"message": f"Flag '{name}' criada com sucesso"}), 201
 
 @app.route('/flags', methods=['GET'])
@@ -111,7 +111,7 @@ def get_flag_status(name):
             cur.close()
         if 'conn' in locals() and not conn.closed:
             conn.close()
-    
+
     if flag:
         return jsonify(flag), 200
     return jsonify({"error": "Flag não encontrada"}), 404
@@ -121,17 +121,17 @@ def update_flag(name):
     data = request.get_json()
     if data is None or 'is_enabled' not in data or not isinstance(data['is_enabled'], bool):
         return jsonify({"error": "O campo 'is_enabled' (booleano) é obrigatório"}), 400
-        
+
     is_enabled = data['is_enabled']
-    
+
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("UPDATE flags SET is_enabled = %s WHERE name = %s", (is_enabled, name))
-        
+
         if cur.rowcount == 0:
             return jsonify({"error": "Flag não encontrada"}), 404
-            
+
         conn.commit()
     except Exception as e:
         return jsonify({"error": "Erro interno no servidor ao atualizar a flag", "details": str(e)}), 500
@@ -140,7 +140,7 @@ def update_flag(name):
             cur.close()
         if 'conn' in locals() and not conn.closed:
             conn.close()
-    
+
     return jsonify({"message": f"Flag '{name}' atualizada"}), 200
 
 if __name__ == '__main__':
