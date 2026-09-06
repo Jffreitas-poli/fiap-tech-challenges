@@ -44,6 +44,6 @@ patches:
 # 'name' casa com a imagem dos manifests da Fase 2 (ECR antigo). O CI atualiza
 # newTag (commit SHA) via 'kustomize edit set image'.
 images:
-  - name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/analytics-image
-    newName: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/analytics-image
-    newTag: "1.0"
+- name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/analytics-image
+  newName: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/analytics-image
+  newTag: 8750fe531b1d8fb20d9504d6d57f9bec5c75ce69
