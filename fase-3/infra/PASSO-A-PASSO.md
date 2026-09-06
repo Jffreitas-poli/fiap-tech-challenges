@@ -206,9 +206,10 @@ kubectl -n toggle get secret auth-secret flag-secret targeting-secret evaluation
 - `analytics-deployment` ganha `secretRef: analytics-secret` no `envFrom` via
   patch no kustomization (na fase-2 só tinha `configMapRef`).
 - `MASTER_KEY` / `SERVICE_API_KEY` são gerados; para chamadas admin, leia com
-  `aws secretsmanager get-secret-value --secret-id tc-auth-app`. Registrar a
-  `SERVICE_API_KEY` na tabela `api_keys` do auth é passo de bootstrap de app,
-  à parte.
+  `aws secretsmanager get-secret-value --secret-id tc-auth-app`.
+- A `SERVICE_API_KEY` é registrada na tabela `api_keys` do auth pelo Job
+  `auth-seed-service-key` (hook `PostSync` do ArgoCD, `manifests/auth/seed-job.yaml`)
+  — insere `sha256hex(SERVICE_API_KEY)`, idempotente. Sem passo manual.
 
 ---
 

@@ -11,6 +11,7 @@ resources:
   - ../../../../fase-2/auth-service/k8s/service.yaml
   - externalsecret.yaml
   - migrate-job.yaml
+  - seed-job.yaml
 
 namespace: toggle
 
