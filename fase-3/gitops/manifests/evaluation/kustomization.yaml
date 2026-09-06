@@ -2,13 +2,15 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 # Reaproveita os manifests da Fase 2 sem duplicar.
-# secrets.yaml e DELIBERADAMENTE omitido (credenciais commitadas em base64);
-# o Secret e criado a partir do 'terraform output' do modulo rds.
+# secrets.yaml da fase-2 e omitido; o Secret <svc>-secret e materializado
+# pelo External Secrets Operator a partir do AWS Secrets Manager
+# (externalsecret.yaml + ClusterSecretStore em manifests/platform).
 # evaluation-service nao tem banco relacional (so Redis) -> sem Job de migration.
 resources:
   - ../../../../fase-2/evaluation-service/k8s/configmap.yaml
   - ../../../../fase-2/evaluation-service/k8s/deployment.yaml
   - ../../../../fase-2/evaluation-service/k8s/service.yaml
+  - externalsecret.yaml
   - ../../../../fase-2/evaluation-service/k8s/hpa.yaml
 
 namespace: toggle

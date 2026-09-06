@@ -177,34 +177,34 @@ aws eks update-kubeconfig --name tc-eks --region us-east-1
 kubectl get nodes          # 2 nodes Ready
 ```
 
-### 6.2 Criar os Secrets dos bancos a partir dos outputs
+### 6.2 Secrets do K8s — via External Secrets Operator
 
-Os `deployment.yaml` da Fase 2 fazem `envFrom` de um Secret com `DATABASE_URL`.
-Enquanto não há External Secrets, crie a partir do output do Terraform:
+Não é mais passo manual. O `terraform apply` publica no **AWS Secrets Manager**:
 
-```bash
-# em fase-3/infra/terraform/envs/lab
-for svc in auth flag targeting; do
-  URL=$(terraform output -json rds_database_urls | jq -r ".$svc")
-  kubectl -n toggle create secret generic ${svc}-secret \
-    --from-literal=DATABASE_URL="$URL" \
-    --dry-run=client -o yaml | kubectl apply -f -
-done
-```
+| Secret ASM | Conteúdo | Origem |
+|---|---|---|
+| `tc-rds-{auth,flag,targeting}-credentials` | `{username,password,host,url,...}` | módulo `rds` |
+| `tc-auth-app` | `{MASTER_KEY}` | `random_password` |
+| `tc-evaluation-app` | `{SERVICE_API_KEY}` | `random_password` |
 
-> Confira o **nome** do Secret que cada `fase-2/<svc>-service/k8s/deployment.yaml`
-> referencia em `envFrom` e ajuste `${svc}-secret` se for diferente.
+O **External Secrets Operator** (instalado pelo módulo `addons`) + o
+`ClusterSecretStore` `aws-secrets-manager` (ArgoCD app `platform`) leem esses
+valores e materializam o Secret `<svc>-secret` no namespace `toggle` — o mesmo
+nome que cada `deployment.yaml` referencia em `envFrom`. Sem `kubectl create secret`.
 
-O `evaluation-service` precisa de `REDIS_URL`:
+Conferir:
 
 ```bash
-REDIS_URL=$(terraform output -raw redis_url)
-kubectl -n toggle create secret generic evaluation-redis \
-  --from-literal=REDIS_URL="$REDIS_URL" \
-  --dry-run=client -o yaml | kubectl apply -f -
+kubectl -n toggle get externalsecrets        # SecretSynced=True
+kubectl -n toggle get secret auth-secret flag-secret targeting-secret evaluation-secret
 ```
 
-O `analytics-service` **não** tem secret — usa o configmap + a role dos nodes.
+- `evaluation-service` pega `REDIS_URL` do **configmap** (não é secret).
+- `analytics-service` **não** tem secret — configmap + role dos nodes.
+- `MASTER_KEY` / `SERVICE_API_KEY` são gerados; para chamadas admin, leia com
+  `aws secretsmanager get-secret-value --secret-id tc-auth-app`. Registrar a
+  `SERVICE_API_KEY` na tabela `api_keys` do auth é passo de bootstrap de app,
+  à parte.
 
 ---
 
