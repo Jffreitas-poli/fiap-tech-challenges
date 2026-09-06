@@ -18,6 +18,11 @@ variable "enable_argocd" {
   default = true
 }
 
+variable "enable_external_secrets" {
+  type    = bool
+  default = true
+}
+
 variable "ingress_nginx_values_path" {
   description = "Caminho para o arquivo de values do chart ingress-nginx (reusa fase-2/ingress-nginx-values.yaml)."
   type        = string
@@ -41,6 +46,11 @@ variable "keda_chart_version" {
 variable "argocd_chart_version" {
   type    = string
   default = "7.6.12"
+}
+
+variable "external_secrets_chart_version" {
+  type    = string
+  default = "0.10.7"
 }
 
 variable "argocd_extra_values" {

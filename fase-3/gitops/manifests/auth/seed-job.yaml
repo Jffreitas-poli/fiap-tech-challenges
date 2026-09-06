@@ -1,0 +1,53 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: auth-seed-service-key
+  namespace: toggle
+  annotations:
+    # roda depois do sync (tabela api_keys ja migrada, app no ar)
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 300
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app: auth
+        job: seed
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: seed
+          image: postgres:16-alpine
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: auth-secret
+                  key: DATABASE_URL
+            - name: SERVICE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: evaluation-secret
+                  key: SERVICE_API_KEY
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              # api_keys.key_hash = SHA-256 hex da chave crua (ver auth key.go)
+              HASH=$(printf '%s' "$SERVICE_API_KEY" | sha256sum | cut -d' ' -f1)
+              psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c \
+                "INSERT INTO api_keys (name, key_hash) VALUES ('evaluation-service', '$HASH') ON CONFLICT (key_hash) DO NOTHING;"
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "10m"
+            limits:
+              memory: "64Mi"
+              cpu: "50m"

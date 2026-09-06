@@ -2,16 +2,34 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 # Reaproveita os manifests da Fase 2 sem duplicar.
-# secrets.yaml e DELIBERADAMENTE omitido (credenciais commitadas em base64);
-# o Secret e criado a partir do 'terraform output' do modulo rds.
+# secrets.yaml da fase-2 e omitido; o Secret <svc>-secret e materializado
+# pelo External Secrets Operator a partir do AWS Secrets Manager
+# (externalsecret.yaml + ClusterSecretStore em manifests/platform).
 # evaluation-service nao tem banco relacional (so Redis) -> sem Job de migration.
 resources:
-- ../../../../fase-2/evaluation-service/k8s/configmap.yaml
-- ../../../../fase-2/evaluation-service/k8s/deployment.yaml
-- ../../../../fase-2/evaluation-service/k8s/service.yaml
-- ../../../../fase-2/evaluation-service/k8s/hpa.yaml
+  - ../../../../fase-2/evaluation-service/k8s/configmap.yaml
+  - ../../../../fase-2/evaluation-service/k8s/deployment.yaml
+  - ../../../../fase-2/evaluation-service/k8s/service.yaml
+  - externalsecret.yaml
+  - ../../../../fase-2/evaluation-service/k8s/hpa.yaml
 
 namespace: toggle
+
+# O configmap da fase-2 traz REDIS_URL / AWS_SQS_URL / AWS_REGION apontando
+# para a conta e regiao da fase-2 (us-east-2). Esses valores agora vem do
+# Secrets Manager via evaluation-secret; removidos do configmap para nao
+# ficar valor obsoleto conflitante.
+patches:
+  - target:
+      kind: ConfigMap
+      name: evaluation-configmap
+    patch: |
+      - op: remove
+        path: /data/REDIS_URL
+      - op: remove
+        path: /data/AWS_SQS_URL
+      - op: remove
+        path: /data/AWS_REGION
 
 # 'name' casa com a imagem dos manifests da Fase 2 (ECR antigo). O CI atualiza
 # newTag (commit SHA) via 'kustomize edit set image'.
