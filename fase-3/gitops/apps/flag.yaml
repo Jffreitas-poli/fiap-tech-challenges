@@ -9,7 +9,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/NyEstevo/fiap-tech-challenges.git
-    targetRevision: main
+    targetRevision: lab
     path: fase-3/gitops/manifests/flag
   destination:
     server: https://kubernetes.default.svc
