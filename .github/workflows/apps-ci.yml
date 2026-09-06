@@ -113,7 +113,7 @@ jobs:
         run: docker build --target prod -t "app:ci" .
 
       - name: trivy image scan (app)
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.29.0
         with:
           image-ref: "app:ci"
           format: table
@@ -152,7 +152,7 @@ jobs:
 
       - name: trivy image scan (migration)
         if: github.event_name == 'push' && steps.meta.outputs.migrate == 'golang-migrate'
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.29.0
         with:
           image-ref: "migrate:ci"
           format: table
