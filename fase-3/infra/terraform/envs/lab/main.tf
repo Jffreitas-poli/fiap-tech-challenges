@@ -228,15 +228,31 @@ resource "null_resource" "ingress_lb_cleanup" {
 
 # Application "app-of-apps" -- ArgoCD passa a sincronizar fase-3/gitops/
 #
-# kubernetes_manifest exige conexao viva com a API do cluster JA no plan.
-# Por isso fica atras de uma flag: no 1o apply (cluster ainda nao existe) e
-# no CI ela e false. Depois que o cluster + ArgoCD estao no ar, rode:
-#   terraform apply -var bootstrap_gitops_root_app=true
-# (ou, alternativa manual: kubectl apply -f fase-3/gitops/root-app.yaml)
-resource "kubernetes_manifest" "root_app" {
+# Aplicada via local-exec (kubectl), NAO via kubernetes_manifest: aquele
+# recurso exige conexao viva com a API do cluster ja no `plan`, o que quebra
+# o 1o apply de um ambiente vazio e o `tf-plan` do CI. O null_resource so
+# executa no apply, depois que os add-ons (inclusive ArgoCD + CRDs) subiram.
+# Idempotente (kubectl apply); re-roda quando root-app.yaml muda.
+resource "null_resource" "root_app" {
   count = var.bootstrap_gitops_root_app ? 1 : 0
 
-  manifest = yamldecode(file(local.gitops_root_app_path))
+  triggers = {
+    cluster      = var.cluster_name
+    region       = var.region
+    manifest_sha = filesha256(local.gitops_root_app_path)
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      set -e
+      aws eks update-kubeconfig --name ${self.triggers.cluster} --region ${self.triggers.region}
+      for i in $(seq 1 30); do
+        kubectl get crd applications.argoproj.io >/dev/null 2>&1 && break
+        echo "aguardando CRD do ArgoCD ($i/30)..."; sleep 10
+      done
+      kubectl apply -f ${local.gitops_root_app_path}
+    EOT
+  }
 
   depends_on = [module.addons]
 }

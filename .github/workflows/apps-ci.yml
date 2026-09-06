@@ -10,6 +10,12 @@ on:
     paths:
       - "fase-2/**"
       - ".github/workflows/apps-ci.yml"
+  workflow_dispatch:
+    inputs:
+      services:
+        description: 'servicos a buildar: "all" ou CSV (ex.: auth,flag)'
+        default: 'all'
+        type: string
 
 permissions:
   contents: write        # o job 'cd' commita o bump de tag no proprio repo
@@ -26,15 +32,18 @@ env:
   KUSTOMIZE_VERSION: "5.4.3"
 
 jobs:
-  # -------- descobre quais servicos mudaram --------
+  # -------- descobre quais servicos buildar --------
+  # push/PR  -> so o que mudou em fase-2/<svc>-service/**
+  # dispatch -> input 'services' ("all" ou CSV)
   detect:
     runs-on: ubuntu-latest
     outputs:
-      services: ${{ steps.filter.outputs.changes }}
+      services: ${{ steps.pick.outputs.services }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
         id: filter
+        if: github.event_name != 'workflow_dispatch'
         with:
           filters: |
             auth: 'fase-2/auth-service/**'
@@ -42,6 +51,20 @@ jobs:
             targeting: 'fase-2/targeting-service/**'
             evaluation: 'fase-2/evaluation-service/**'
             analytics: 'fase-2/analytics-service/**'
+      - id: pick
+        env:
+          ALL: '["auth","flag","targeting","evaluation","analytics"]'
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            IN="${{ inputs.services }}"
+            if [ "$IN" = "all" ] || [ -z "$IN" ]; then
+              echo "services=$ALL" >> "$GITHUB_OUTPUT"
+            else
+              echo "services=$(echo "$IN" | tr ',' '\n' | sed 's/[[:space:]]//g' | grep . | jq -R . | jq -cs .)" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "services=${{ steps.filter.outputs.changes }}" >> "$GITHUB_OUTPUT"
+          fi
 
   # -------- build + test + scan + push (1 imagem por servico) --------
   build:
@@ -113,7 +136,7 @@ jobs:
         run: docker build --target prod -t "app:ci" .
 
       - name: trivy image scan (app)
-        uses: aquasecurity/trivy-action@v0.29.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: "app:ci"
           format: table
@@ -121,9 +144,9 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
 
-      # ---- push (so em push na main) ----
+      # ---- push: em push na main ou workflow_dispatch (nao em PR) ----
       - name: configure AWS credentials
-        if: github.event_name == 'push'
+        if: github.event_name != 'pull_request'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -132,13 +155,13 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: ECR login
-        if: github.event_name == 'push'
+        if: github.event_name != 'pull_request'
         run: |
           aws ecr get-login-password --region "$AWS_REGION" \
             | docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
       - name: push imagem da aplicacao
-        if: github.event_name == 'push'
+        if: github.event_name != 'pull_request'
         run: |
           IMG="$ECR_REGISTRY/${{ steps.meta.outputs.app_repo }}:${{ github.sha }}"
           docker tag "app:ci" "$IMG"
@@ -146,13 +169,13 @@ jobs:
 
       # ---- imagem de migration (so auth / golang-migrate) ----
       - name: build imagem de migration
-        if: github.event_name == 'push' && steps.meta.outputs.migrate == 'golang-migrate'
+        if: github.event_name != 'pull_request' && steps.meta.outputs.migrate == 'golang-migrate'
         working-directory: ${{ steps.meta.outputs.context }}
         run: docker build -f Dockerfile.migrate -t "migrate:ci" .
 
       - name: trivy image scan (migration)
-        if: github.event_name == 'push' && steps.meta.outputs.migrate == 'golang-migrate'
-        uses: aquasecurity/trivy-action@v0.29.0
+        if: github.event_name != 'pull_request' && steps.meta.outputs.migrate == 'golang-migrate'
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: "migrate:ci"
           format: table
@@ -161,7 +184,7 @@ jobs:
           exit-code: "1"
 
       - name: push imagem de migration
-        if: github.event_name == 'push' && steps.meta.outputs.migrate == 'golang-migrate'
+        if: github.event_name != 'pull_request' && steps.meta.outputs.migrate == 'golang-migrate'
         run: |
           IMG="$ECR_REGISTRY/tech-challenge/${{ matrix.service }}-migrate-image:${{ github.sha }}"
           docker tag "migrate:ci" "$IMG"
@@ -170,7 +193,7 @@ jobs:
   # -------- CD: bump da tag no GitOps (1 commit para todos os servicos) --------
   cd:
     needs: [ detect, build ]
-    if: github.event_name == 'push' && needs.detect.outputs.services != '[]'
+    if: github.event_name != 'pull_request' && needs.detect.outputs.services != '[]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
