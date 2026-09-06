@@ -2,7 +2,7 @@ name: infra-tf-apply
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, lab ]
     paths:
       - "fase-3/infra/terraform/**"
   workflow_dispatch:
@@ -17,7 +17,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: infra-tf-apply-${{ github.event.inputs.environment || 'lab' }}
+  group: infra-tf-apply-${{ github.event.inputs.environment || github.ref_name }}
   cancel-in-progress: false
 
 env:
@@ -25,12 +25,32 @@ env:
   TF_VERSION: "1.9.8"
 
 jobs:
-  apply:
+  # branch == ambiente: push na lab -> envs/lab, push na main -> envs/prod.
+  # workflow_dispatch usa o input escolhido.
+  resolve:
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'lab' }}
+    outputs:
+      environment: ${{ steps.pick.outputs.environment }}
+    steps:
+      - id: pick
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            env="${{ inputs.environment }}"
+          elif [ "${{ github.ref_name }}" = "main" ]; then
+            env="prod"
+          else
+            env="lab"
+          fi
+          echo "environment=$env" >> "$GITHUB_OUTPUT"
+
+  apply:
+    needs: resolve
+    runs-on: ubuntu-latest
+    # GitHub Environment: 'prod' com Required reviewers -> aprovacao manual antes do apply na main
+    environment: ${{ needs.resolve.outputs.environment }}
     defaults:
       run:
-        working-directory: fase-3/infra/terraform/envs/${{ github.event.inputs.environment || 'lab' }}
+        working-directory: fase-3/infra/terraform/envs/${{ needs.resolve.outputs.environment }}
     steps:
       - uses: actions/checkout@v4
 
@@ -62,7 +82,7 @@ jobs:
       - name: outputs -> step summary
         run: |
           {
-            echo "## Terraform outputs — ${{ github.event.inputs.environment || 'lab' }}"
+            echo "## Terraform outputs — ${{ needs.resolve.outputs.environment }}"
             echo ''
             echo '```json'
             terraform output -json | jq 'map_values(if .sensitive then "<sensitive>" else .value end)'
