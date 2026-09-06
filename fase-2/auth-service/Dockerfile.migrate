@@ -1,0 +1,9 @@
+# Imagem de migration do auth-service (golang-migrate).
+# Publicada no ECR tech-challenge/auth-migrate-image com a mesma tag (commit SHA)
+# da imagem da aplicacao. Consumida pelo Job PreSync do ArgoCD.
+FROM migrate/migrate:v4.18.1
+
+COPY migrations /migrations
+
+# entrypoint padrao da imagem ja e "migrate"; o Job passa:
+#   -path=/migrations -database=$(DATABASE_URL) up
