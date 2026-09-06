@@ -28,5 +28,3 @@ CMD ["evaluation-service"]
 FROM base AS prod
 
 CMD ["evaluation-service"]
-
-

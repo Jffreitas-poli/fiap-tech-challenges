@@ -28,5 +28,3 @@ CMD ["auth-service"]
 FROM base AS prod
 
 CMD ["auth-service"]
-
-

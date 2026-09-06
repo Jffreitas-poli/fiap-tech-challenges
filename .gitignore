@@ -29,3 +29,10 @@ terraform.rc
 # manter os exemplos versionados, ignorar os tfvars reais que contenham segredos
 # (neste projeto os tfvars nao tem segredos, entao terraform.tfvars fica versionado)
 
+# Claude Code - configuracao local, nao versionar
+/CLAUDE.md
+.claude/settings.local.json
+
+# Terraform dependency lock: versionar apenas nos root modules (bootstrap, envs/*),
+# nunca nos modulos reutilizaveis (gerado pelos hooks terraform_validate/tflint)
+fase-3/infra/terraform/modules/**/.terraform.lock.hcl
