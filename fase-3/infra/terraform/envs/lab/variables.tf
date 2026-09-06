@@ -16,6 +16,12 @@ variable "bootstrap_gitops_root_app" {
   default     = true
 }
 
+variable "enable_external_secrets_creds" {
+  description = "Cria os Secrets com as chaves da sessao: aws-static-creds (ns external-secrets) para o ClusterSecretStore do ESO e aws-session-creds (ns toggle) para os pods analytics/evaluation que falam direto com SQS/DynamoDB. Precisa das env vars AWS_* no ambiente do apply."
+  type        = bool
+  default     = true
+}
+
 variable "cluster_name" {
   description = "Nome do cluster EKS."
   type        = string

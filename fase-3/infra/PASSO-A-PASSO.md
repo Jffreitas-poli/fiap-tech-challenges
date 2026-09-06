@@ -193,18 +193,55 @@ O **External Secrets Operator** (instalado pelo módulo `addons`) + o
 valores e materializam o Secret `<svc>-secret` no namespace `toggle` — o mesmo
 nome que cada `deployment.yaml` referencia em `envFrom`. Sem `kubectl create secret`.
 
+O ESO autentica na AWS com **chaves estáticas da sessão** (não há IRSA no
+Academy e o pod não alcança o IMDS do node). O mesmo vale para os pods
+`analytics` e `evaluation`, que falam direto com SQS/DynamoDB pela cadeia
+padrão do SDK. O `terraform apply` (`null_resource.eso_aws_creds`) cria, a
+partir das env vars `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` /
+`AWS_SESSION_TOKEN` do Passo 4, dois Secrets:
+
+- `aws-static-creds` (ns `external-secrets`, chaves kebab-case) — usado pelo
+  `ClusterSecretStore` em `auth.secretRef`;
+- `aws-session-creds` (ns `toggle`, chaves `AWS_*`) — adicionado ao `envFrom`
+  dos deployments `analytics` / `evaluation` via patch no kustomization.
+
+**O session token expira ~4h** — quando os `ExternalSecret` pararem de
+sincronizar ou o worker SQS do `analytics` logar `Unable to locate
+credentials`, re-rode o `infra-tf-apply` (recria os dois Secrets) ou:
+
+```bash
+kubectl -n external-secrets create secret generic aws-static-creds \
+  --from-literal=access-key-id="$AWS_ACCESS_KEY_ID" \
+  --from-literal=secret-access-key="$AWS_SECRET_ACCESS_KEY" \
+  --from-literal=session-token="$AWS_SESSION_TOKEN" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl -n toggle create secret generic aws-session-creds \
+  --from-literal=AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+  --from-literal=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+  --from-literal=AWS_SESSION_TOKEN="$AWS_SESSION_TOKEN" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+# aplicar as novas creds: reinicia os pods que leem o Secret
+kubectl -n toggle rollout restart deploy/analytics-deployment deploy/evaluation-deployment
+```
+
 Conferir:
 
 ```bash
-kubectl -n toggle get externalsecrets        # SecretSynced=True
+kubectl get clustersecretstore aws-secrets-manager     # STATUS Valid
+kubectl -n toggle get externalsecrets                  # SecretSynced=True
 kubectl -n toggle get secret auth-secret flag-secret targeting-secret evaluation-secret analytics-secret
 ```
 
 - Os `configmap.yaml` só guardam valor **estático** (`PORT`, URLs de serviço
   in-cluster). `REDIS_URL` / `AWS_SQS_URL` / `AWS_DYNAMODB_TABLE` / `AWS_REGION`
   vêm do ASM (eram valores da fase-2, `us-east-2`, no configmap).
-- `analytics-deployment` ganha `secretRef: analytics-secret` no `envFrom` via
-  patch no kustomization (na fase-2 só tinha `configMapRef`).
+- `analytics-deployment` ganha `secretRef: analytics-secret` e
+  `secretRef: aws-session-creds` no `envFrom` via patch no kustomization (na
+  fase-2 só tinha `configMapRef`); `evaluation-deployment` ganha
+  `secretRef: aws-session-creds`. Sem esse Secret o boto3/SDK não acha
+  credencial e o worker SQS falha com `Unable to locate credentials`.
 - `MASTER_KEY` / `SERVICE_API_KEY` são gerados; para chamadas admin, leia com
   `aws secretsmanager get-secret-value --secret-id tc-auth-app`.
 - A `SERVICE_API_KEY` é registrada na tabela `api_keys` do auth pelo Job
