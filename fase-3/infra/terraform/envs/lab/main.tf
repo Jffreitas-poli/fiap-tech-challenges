@@ -33,6 +33,9 @@ locals {
     "tech-challenge/targeting-image",
     "tech-challenge/evaluation-image",
     "tech-challenge/analytics-image",
+    # imagem de migration do auth (golang-migrate). flag/targeting rodam a
+    # migration (Alembic) a partir da propria imagem da aplicacao.
+    "tech-challenge/auth-migrate-image",
   ]
 
   ingress_nginx_values_path = "${path.module}/../../../../../fase-2/ingress-nginx-values.yaml"
