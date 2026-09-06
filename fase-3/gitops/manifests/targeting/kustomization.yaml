@@ -11,7 +11,10 @@ resources:
 
 namespace: toggle
 
-# O passo final do CI de cada servico atualiza 'newTag' com a tag publicada no ECR.
+# 'name' casa com a imagem dos manifests da Fase 2 (ECR antigo); newName
+# aponta para o ECR desta conta. O CI atualiza newTag (commit SHA) via
+# 'kustomize edit set image'.
 images:
-  - name: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/targeting-image
+  - name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/targeting-image
+    newName: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/targeting-image
     newTag: "1.0"

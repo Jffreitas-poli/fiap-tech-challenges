@@ -4,6 +4,7 @@ kind: Kustomization
 # Reaproveita os manifests da Fase 2 sem duplicar.
 # secrets.yaml e DELIBERADAMENTE omitido (credenciais commitadas em base64);
 # o Secret e criado a partir do 'terraform output' do modulo rds.
+# analytics-service usa SQS + DynamoDB (schemaless) -> sem Job de migration.
 resources:
   - ../../../../fase-2/analytics-service/k8s/configmap.yaml
   - ../../../../fase-2/analytics-service/k8s/deployment.yaml
@@ -14,7 +15,9 @@ resources:
 
 namespace: toggle
 
-# O passo final do CI de cada servico atualiza 'newTag' com a tag publicada no ECR.
+# 'name' casa com a imagem dos manifests da Fase 2 (ECR antigo). O CI atualiza
+# newTag (commit SHA) via 'kustomize edit set image'.
 images:
-  - name: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/analytics-image
+  - name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/analytics-image
+    newName: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/analytics-image
     newTag: "1.0"
