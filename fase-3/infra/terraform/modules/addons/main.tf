@@ -70,6 +70,27 @@ resource "helm_release" "keda" {
   cleanup_on_fail  = true
 }
 
+# External Secrets Operator: materializa Secrets do K8s a partir do AWS
+# Secrets Manager. Sem IRSA (Academy) -> os pods do ESO usam a credencial
+# da LabRole via IMDS do node (mesma abordagem do analytics-service).
+resource "helm_release" "external_secrets" {
+  count = var.enable_external_secrets ? 1 : 0
+
+  name             = "external-secrets"
+  repository       = "https://charts.external-secrets.io"
+  chart            = "external-secrets"
+  version          = var.external_secrets_chart_version
+  namespace        = "external-secrets"
+  create_namespace = true
+  timeout          = 600
+  cleanup_on_fail  = true
+
+  set {
+    name  = "installCRDs"
+    value = "true"
+  }
+}
+
 resource "helm_release" "argocd" {
   count = var.enable_argocd ? 1 : 0
 
