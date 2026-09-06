@@ -1,0 +1,216 @@
+name: apps-ci
+
+on:
+  pull_request:
+    paths:
+      - "fase-2/**"
+      - ".github/workflows/apps-ci.yml"
+  push:
+    branches: [ main ]
+    paths:
+      - "fase-2/**"
+      - ".github/workflows/apps-ci.yml"
+
+permissions:
+  contents: write        # o job 'cd' commita o bump de tag no proprio repo
+
+concurrency:
+  # serializa runs: evita corrida de push no passo de CD
+  group: apps-ci-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: "361075236043"
+  ECR_REGISTRY: 361075236043.dkr.ecr.us-east-1.amazonaws.com
+  KUSTOMIZE_VERSION: "5.4.3"
+
+jobs:
+  # -------- descobre quais servicos mudaram --------
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.filter.outputs.changes }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            auth: 'fase-2/auth-service/**'
+            flag: 'fase-2/flag-service/**'
+            targeting: 'fase-2/targeting-service/**'
+            evaluation: 'fase-2/evaluation-service/**'
+            analytics: 'fase-2/analytics-service/**'
+
+  # -------- build + test + scan + push (1 imagem por servico) --------
+  build:
+    needs: detect
+    if: needs.detect.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.detect.outputs.services) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: metadados do servico
+        id: meta
+        run: |
+          case "${{ matrix.service }}" in
+            auth)       lang=go;     migrate=golang-migrate ;;
+            evaluation) lang=go;     migrate=none ;;
+            flag)       lang=python; migrate=alembic ;;
+            targeting)  lang=python; migrate=alembic ;;
+            analytics)  lang=python; migrate=none ;;
+          esac
+          {
+            echo "lang=$lang"
+            echo "migrate=$migrate"
+            echo "context=fase-2/${{ matrix.service }}-service"
+            echo "app_repo=tech-challenge/${{ matrix.service }}-image"
+          } >> "$GITHUB_OUTPUT"
+
+      # ---- build + testes ----
+      - uses: actions/setup-go@v5
+        if: steps.meta.outputs.lang == 'go'
+        with:
+          go-version: "1.21"
+      - name: go build + vet
+        if: steps.meta.outputs.lang == 'go'
+        working-directory: ${{ steps.meta.outputs.context }}
+        run: |
+          go build ./...
+          go vet ./...
+      - name: golangci-lint
+        if: steps.meta.outputs.lang == 'go'
+        continue-on-error: true   # soft; endurecer apos triagem
+        uses: golangci/golangci-lint-action@v6
+        with:
+          working-directory: ${{ steps.meta.outputs.context }}
+          version: v1.60
+
+      - uses: actions/setup-python@v5
+        if: steps.meta.outputs.lang == 'python'
+        with:
+          python-version: "3.12"
+      - name: pip install + smoke
+        if: steps.meta.outputs.lang == 'python'
+        working-directory: ${{ steps.meta.outputs.context }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python -m py_compile $(git ls-files '*.py')
+      - name: ruff
+        if: steps.meta.outputs.lang == 'python'
+        continue-on-error: true   # soft; endurecer apos triagem
+        run: pipx run ruff check ${{ steps.meta.outputs.context }}
+
+      # ---- imagem da aplicacao ----
+      - name: docker build (app)
+        working-directory: ${{ steps.meta.outputs.context }}
+        run: docker build --target prod -t "app:ci" .
+
+      - name: trivy image scan (app)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: "app:ci"
+          format: table
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+      # ---- push (so em push na main) ----
+      - name: configure AWS credentials
+        if: github.event_name == 'push'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: ECR login
+        if: github.event_name == 'push'
+        run: |
+          aws ecr get-login-password --region "$AWS_REGION" \
+            | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+
+      - name: push imagem da aplicacao
+        if: github.event_name == 'push'
+        run: |
+          IMG="$ECR_REGISTRY/${{ steps.meta.outputs.app_repo }}:${{ github.sha }}"
+          docker tag "app:ci" "$IMG"
+          docker push "$IMG"
+
+      # ---- imagem de migration (so auth / golang-migrate) ----
+      - name: build imagem de migration
+        if: github.event_name == 'push' && steps.meta.outputs.migrate == 'golang-migrate'
+        working-directory: ${{ steps.meta.outputs.context }}
+        run: docker build -f Dockerfile.migrate -t "migrate:ci" .
+
+      - name: trivy image scan (migration)
+        if: github.event_name == 'push' && steps.meta.outputs.migrate == 'golang-migrate'
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: "migrate:ci"
+          format: table
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - name: push imagem de migration
+        if: github.event_name == 'push' && steps.meta.outputs.migrate == 'golang-migrate'
+        run: |
+          IMG="$ECR_REGISTRY/tech-challenge/${{ matrix.service }}-migrate-image:${{ github.sha }}"
+          docker tag "migrate:ci" "$IMG"
+          docker push "$IMG"
+
+  # -------- CD: bump da tag no GitOps (1 commit para todos os servicos) --------
+  cd:
+    needs: [ detect, build ]
+    if: github.event_name == 'push' && needs.detect.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: instala kustomize
+        run: |
+          curl -sSLo /tmp/kustomize.tar.gz \
+            "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+          tar -xzf /tmp/kustomize.tar.gz -C /tmp
+          sudo install -m 0755 /tmp/kustomize /usr/local/bin/kustomize
+
+      - name: bump das imagens
+        run: |
+          set -euo pipefail
+          SHA="${{ github.sha }}"
+          OLD_REG="047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge"
+          for svc in $(echo '${{ needs.detect.outputs.services }}' | jq -r '.[]'); do
+            dir="fase-3/gitops/manifests/${svc}"
+            ( cd "$dir"
+              kustomize edit set image \
+                "${OLD_REG}/${svc}-image=${ECR_REGISTRY}/tech-challenge/${svc}-image:${SHA}"
+              if [ "$svc" = "auth" ]; then
+                kustomize edit set image \
+                  "${ECR_REGISTRY}/tech-challenge/auth-migrate-image=${ECR_REGISTRY}/tech-challenge/auth-migrate-image:${SHA}"
+              fi
+            )
+          done
+
+      - name: commit + push
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "nada mudou nos kustomization"; exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          svcs=$(echo '${{ needs.detect.outputs.services }}' | jq -r 'join(", ")')
+          git add fase-3/gitops/manifests
+          git commit -m "cd(apps): bump ${svcs} -> ${GITHUB_SHA:0:7} [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main
