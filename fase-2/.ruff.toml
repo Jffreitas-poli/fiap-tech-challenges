@@ -1,0 +1,6 @@
+# Baseline enxuto para o ruff no apps-ci: pyflakes (F) = bugs reais
+# (nomes indefinidos, imports nao usados, f-strings quebradas).
+# TODO endurecer (I import-sort, BLE001, UP..., PLW...) depois de limpar
+# o codigo legado herdado da fase-2.
+[lint]
+select = ["F"]

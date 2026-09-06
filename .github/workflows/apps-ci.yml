@@ -109,10 +109,9 @@ jobs:
       - name: golangci-lint
         if: steps.meta.outputs.lang == 'go'
         continue-on-error: true   # soft; endurecer apos triagem
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v9
         with:
           working-directory: ${{ steps.meta.outputs.context }}
-          version: v2.1.6
 
       - uses: actions/setup-python@v5
         if: steps.meta.outputs.lang == 'python'
@@ -128,7 +127,7 @@ jobs:
       - name: ruff
         if: steps.meta.outputs.lang == 'python'
         continue-on-error: true   # soft; endurecer apos triagem
-        run: pipx run ruff check ${{ steps.meta.outputs.context }}
+        run: pipx run ruff check --output-format=github ${{ steps.meta.outputs.context }}
 
       # ---- imagem da aplicacao ----
       - name: docker build (app)
