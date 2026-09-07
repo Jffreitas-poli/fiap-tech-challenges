@@ -1,6 +1,14 @@
-# Baseline enxuto para o ruff no apps-ci: pyflakes (F) = bugs reais
-# (nomes indefinidos, imports nao usados, f-strings quebradas).
-# TODO endurecer (I import-sort, BLE001, UP..., PLW...) depois de limpar
-# o codigo legado herdado da fase-2.
+# Lint/format dos servicos Python (flag, targeting, analytics).
+# Gate bloqueante no CI (_reusable-ci-service.yml -> job 'lint').
+target-version = "py312"
+line-length = 100
+
 [lint]
-select = ["F"]
+# E/W  pycodestyle   | F  pyflakes (bugs reais)   | I  isort
+# B    flake8-bugbear| UP pyupgrade               | C4 comprehensions
+select = ["E", "W", "F", "I", "B", "UP", "C4"]
+# E501: o formatter cuida do comprimento; nao falhar lint por 1-2 chars.
+ignore = ["E501"]
+
+[format]
+quote-style = "double"
