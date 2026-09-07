@@ -68,40 +68,101 @@ Toda a infraestrutura que era provisionada manualmente na Fase 2 foi substituíd
 4. **Mensageria:** 1 fila SQS, consumida pelo `analytics-service` e usada como gatilho de escalabilidade do KEDA.
 5. **Repositórios:** 5 repositórios ECR (um por microsserviço), provisionados via Terraform.
 
-> A confirmar: estrutura final dos módulos Terraform (ex.: `modules/networking`, `modules/eks`, `modules/rds`, `modules/elasticache`, `modules/dynamodb`, `modules/sqs`, `modules/ecr`) — documentar aqui a árvore de diretórios real do repositório.
+Árvore real do Terraform (`fase-3/infra/`):
+
+```
+infra/
+├── bootstrap/                 # state local; roda 1x fora do CI
+│   ├── (lab)  main/variables/outputs.tf     # bucket S3 + lock DynamoDB
+│   └── prod/  main/variables/outputs.tf     # bucket S3 + lock + OIDC + IAM (conta pessoal)
+└── terraform/
+    ├── modules/
+    │   ├── networking/        # VPC, subnets pub/priv, IGW, NAT, route tables
+    │   ├── eks/               # cluster + node group (LabRole no lab; roles próprias no prod)
+    │   ├── rds/               # instância PostgreSQL + SG + secret (for_each: auth/flag/targeting)
+    │   ├── elasticache/       # replication group Redis
+    │   ├── dynamodb/          # tabela de eventos do analytics
+    │   ├── sqs/               # fila + DLQ (SSE gerenciado)
+    │   ├── ecr/               # repositórios (for_each), scan-on-push, lifecycle
+    │   ├── addons/            # helm_release: metrics-server, ingress-nginx, keda, external-secrets, argocd
+    │   └── iam_oidc_github/   # OIDC provider + role (usado só pelo bootstrap/prod)
+    ├── envs/
+    │   ├── lab/               # APLICADO — LabRole, 2 AZs, single-AZ RDS
+    │   └── prod/              # código pronto, NÃO aplicado — HA, IAM próprio, OIDC
+    ├── .checkov.yaml          # gate bloqueante (soft-fail:false) + baseline Academy
+    └── .tflint.hcl
+```
+
+Regras seguidas: `required_providers` fixados com `~>`; `for_each` onde a chave
+importa (serviços RDS, repos ECR); `locals` para transformações; blocos
+`validation {}` nos inputs críticos dos módulos; outputs sensíveis com
+`sensitive = true`; `tags`/`default_tags` padronizadas via `local.common_tags`.
 
 ## Backend Remoto do Terraform State
 
-O `terraform.tfstate` não é mantido localmente. O backend remoto está configurado em um **Bucket S3**, com locking de estado habilitado (via `use_lockfile` ou DynamoDB, conforme o mecanismo adotado pelo grupo), evitando aplicações concorrentes e perda de estado entre execuções de diferentes máquinas/pipelines.
+O `terraform.tfstate` não é mantido localmente. O backend remoto é um **Bucket
+S3** (`tc-fiap-tfstate-361075236043`, versionado e com encryption), com
+**state locking via tabela DynamoDB** (`tc-fiap-tflock`) — `use_lockfile` (lock
+nativo no S3) exige Terraform ≥ 1.10 e o projeto fixa `1.9.8`; a migração para
+`use_lockfile` está documentada como passo futuro. O lock evita aplicações
+concorrentes e perda de estado entre máquinas/pipelines. `envs/lab` e `envs/prod`
+usam chaves distintas (`fase-3/lab/…` e `fase-3/prod/…`) no mesmo bucket (lab) ou
+em bucket próprio (prod, criado por `bootstrap/prod`).
 
 ## Pipeline de CI & DevSecOps
 
-Cada um dos 5 microsserviços possui seu próprio workflow de CI (GitHub Actions), disparado em Pull Requests e em pushes para a `main`. O pipeline segue os seguintes estágios:
+Cada um dos 5 microsserviços tem seu próprio workflow de CI
+(`.github/workflows/ci-<svc>.yml`), disparado em Pull Requests e em pushes para
+`lab`/`main` que tocam `fase-2/<svc>-service/**`. Todos chamam o workflow
+reutilizável **`_reusable-ci-service.yml`** (parametrizado por `service_name`,
+`service_language`, `working_directory`). A autenticação AWS é a composite
+action **`.github/actions/aws-auth`** (lab → chaves estáticas de sessão;
+`main` → OIDC). Estágios sequenciais — cada job depende do anterior:
 
-1. **Build & Unit Test:** compilação do código e execução dos testes unitários.
-2. **Linter / Static Analysis:** `golangci-lint` para os serviços em Go (`auth-service`, `evaluation-service`) e `pylint`/`flake8` para os serviços em Python (`flag-service`, `targeting-service`, `analytics-service`).
-3. **Security Scan (SAST & SCA):**
-   - **SCA (Software Composition Analysis):** varredura de vulnerabilidades nas dependências com Trivy (modo `fs`) / OWASP Dependency Check.
-   - **SAST (Static Application Security Testing):** análise estática do código-fonte com SonarCloud / `gosec` (Go) e `bandit` (Python).
-   - **Regra de bloqueio:** vulnerabilidade classificada como **CRÍTICA** falha o pipeline e impede o prosseguimento para os estágios seguintes.
-4. **Docker Build & Push:**
-   - Build da imagem Docker do serviço.
-   - Container scan de vulnerabilidades na imagem com Trivy.
-   - Login no AWS ECR.
-   - Push da imagem com a tag do commit hash (ex.: `v1.0.0-a1b2c3d`).
+1. **`build-and-test`:** Go → `go build` + `go vet` + `go test -race -cover`;
+   Python → `pip install` + `pytest --cov`. Cobertura publicada como artifact.
+2. **`lint` (bloqueante):** Go → `golangci-lint` v2 (config `.golangci.yml` por
+   serviço); Python → `ruff check` + `ruff format --check` (`fase-2/.ruff.toml`).
+3. **`security-sast-sca` (bloqueante em CRÍTICO):**
+   - **SCA:** `trivy fs --severity CRITICAL --exit-code 1` nas dependências.
+   - **SAST:** `gosec -severity high` (Go) e `bandit -ll -ii` (Python).
+4. **`docker-build-scan-push`:** `docker build --target prod` → **`trivy image
+   --severity CRITICAL --exit-code 1` antes do push** → `amazon-ecr-login` →
+   push `:<github.sha>` (`auth` também publica a imagem `-migrate-image`).
+   Só em push (não em PR).
+5. **`gitops-update`** (só push na `lab`): `kustomize edit set image` no overlay
+   do serviço e commit `[skip ci]` na branch `lab`.
 
-> A confirmar: ferramentas efetivamente escolhidas em cada estágio (Trivy vs. OWASP Dependency Check, SonarCloud vs. gosec/bandit) — ajustar a lista acima para refletir exatamente o que está nos arquivos `.github/workflows/*.yaml` do repositório.
+**Infra:** `infra-tf-plan` (PR) e `infra-tf-apply` (push) rodam
+`terraform fmt/validate` + `tflint` + **`checkov` com `soft-fail: false`**
+(`.checkov.yaml` com baseline justificada para o AWS Academy) +
+**`trivy config --severity CRITICAL --exit-code 1`**.
+
+A demonstração da regra de bloqueio (dependência com CVE crítico → pipeline
+vermelho) está em [`DEVSECOPS-DEMO.md`](./DEVSECOPS-DEMO.md).
 
 ## Entrega Contínua (CD) & GitOps
 
 Abandonamos o push direto de manifests via CI em favor de **GitOps**:
 
-1. **Repositório de GitOps:** os manifestos Kubernetes (YAMLs/Helm Charts) das aplicações vivem separados do código de cada microsserviço, em [repositório/pasta dedicada — informar link].
-2. **ArgoCD:** instalado no cluster EKS (via Helm ou Terraform com o provider `helm`/`kubectl`), monitorando o repositório de GitOps.
-3. **Atualização automática:** ao final do pipeline de CI, um passo adicional atualiza a tag da imagem no `deployment.yaml` correspondente, no repositório de GitOps, com a tag recém-publicada no ECR.
-4. **Sync:** o ArgoCD detecta a mudança no repositório de GitOps e sincroniza automaticamente o cluster EKS, sem intervenção manual — eliminando o `kubectl apply` local que causava os conflitos de versão relatados no desafio.
+1. **Pasta de GitOps dedicada:** [`fase-3/gitops/`](./gitops/) — separada do
+   código dos serviços. Os overlays Kustomize (`gitops/manifests/<svc>/`)
+   reaproveitam os manifests da Fase 2 (`fase-2/<svc>-service/k8s/`) sem
+   duplicar e **omitem o `secrets.yaml`** (base64), substituído por
+   `ExternalSecret` + `ClusterSecretStore` do External Secrets Operator.
+2. **ArgoCD:** instalado no EKS via Terraform (`modules/addons`, `helm_release`).
+   Modelo **app-of-apps**: `gitops/root-app.yaml` (aponta para `gitops/apps/`
+   com `directory.recurse`) gera 6 `Application` — os 5 microsserviços + a
+   `platform` (ESO), esta com `sync-wave: -1`. `syncPolicy.automated` com
+   `prune` e `selfHeal`.
+3. **Atualização automática:** o job `gitops-update` do CI roda
+   `kustomize edit set image` no `kustomization.yaml` do serviço e commita o
+   bump (tag = `github.sha`) na branch `lab`.
+4. **Sync:** o ArgoCD observa a branch `lab`, detecta o commit e sincroniza o
+   cluster — sem `kubectl apply` local.
 
-O ArgoCD passa a gerenciar os 5 microsserviços do ToggleMaster como Applications independentes, cada uma sincronizada a partir do respectivo caminho no repositório de GitOps.
+Cada microsserviço é uma `Application` independente, sincronizada do respectivo
+`fase-3/gitops/manifests/<svc>`.
 
 ## Dificuldades Encontradas
 
