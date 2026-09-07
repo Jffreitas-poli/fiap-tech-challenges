@@ -20,4 +20,4 @@ namespace: toggle
 images:
 - name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/targeting-image
   newName: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/targeting-image
-  newTag: 5e35bd5dce31f64b09f460cbdd95a575e9b07876
+  newTag: 0ec35360d76036cdcaa1d4c5247556be65b29693
