@@ -15,10 +15,10 @@ resources:
 
 namespace: toggle
 
-# 2 replicas por servico
+# 1 replica por servico (lab: teto de pods baixo)
 replicas:
 - name: auth-deployment
-  count: 2
+  count: 1
 
 # 'name' casa com a imagem escrita nos manifests da Fase 2 (ECR antigo);
 # newName/newTag apontam para o ECR desta conta. O CI atualiza newTag com
