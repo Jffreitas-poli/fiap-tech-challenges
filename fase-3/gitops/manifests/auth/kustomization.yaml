@@ -15,6 +15,11 @@ resources:
 
 namespace: toggle
 
+# lab: 1 replica por servico (2x t3.medium -> teto de pods baixo)
+replicas:
+- name: auth-deployment
+  count: 1
+
 # 'name' casa com a imagem escrita nos manifests da Fase 2 (ECR antigo);
 # newName/newTag apontam para o ECR desta conta. O CI atualiza newTag com
 # a tag publicada (commit SHA) via 'kustomize edit set image'.
