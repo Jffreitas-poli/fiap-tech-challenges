@@ -19,14 +19,19 @@ namespace: toggle
 # piso de replicas ate o KEDA reconciliar (o ScaledObject e ajustado para
 # minReplicaCount: 1 no patch abaixo).
 replicas:
-- name: analytics-deployment
-  count: 1
+- count: 1
+  name: analytics-deployment
 
   # tira os valores obsoletos do configmap
   # o deployment da fase-2 so tem configMapRef -> adiciona os secretRef.
   # aws-session-creds (chaves estaticas da sessao) e criado pelo
   # null_resource.eso_aws_creds no terraform; sem IRSA/IMDS no Academy, e a
   # unica fonte de credencial AWS para o worker SQS + DynamoDB.
+# KEDA no AWS Academy: sem IRSA, o TriggerAuthentication nao pode usar
+# podIdentity. Troca por credenciais estaticas da sessao (Secret
+# aws-session-creds, criado pelo null_resource.eso_aws_creds).
+# scaledobject da fase-2 aponta para a fila/regiao antiga (us-east-2 /
+# conta 047719652987). Aponta para a fila real do lab.
 patches:
 - patch: |
     - op: remove
@@ -59,9 +64,6 @@ patches:
   target:
     kind: ScaledObject
     name: analytics-service-scaler
-# KEDA no AWS Academy: sem IRSA, o TriggerAuthentication nao pode usar
-# podIdentity. Troca por credenciais estaticas da sessao (Secret
-# aws-session-creds, criado pelo null_resource.eso_aws_creds).
 - patch: |
     - op: remove
       path: /spec/podIdentity
@@ -79,11 +81,9 @@ patches:
           key: AWS_SESSION_TOKEN
   target:
     group: keda.sh
-    version: v1alpha1
     kind: TriggerAuthentication
     name: keda-aws-credentials
-# scaledobject da fase-2 aponta para a fila/regiao antiga (us-east-2 /
-# conta 047719652987). Aponta para a fila real do lab.
+    version: v1alpha1
 - patch: |
     - op: replace
       path: /spec/triggers/0/metadata/queueURL
@@ -95,13 +95,13 @@ patches:
       path: /spec/triggers/0/metadata/identityOwner
   target:
     group: keda.sh
-    version: v1alpha1
     kind: ScaledObject
     name: analytics-service-scaler
+    version: v1alpha1
 
 # 'name' casa com a imagem dos manifests da Fase 2 (ECR antigo). O CI atualiza
 # newTag (commit SHA) via 'kustomize edit set image'.
 images:
 - name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/analytics-image
   newName: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/analytics-image
-  newTag: 5e35bd5dce31f64b09f460cbdd95a575e9b07876
+  newTag: 0.0.0-lab.13-6d33632
