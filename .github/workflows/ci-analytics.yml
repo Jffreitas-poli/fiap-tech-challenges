@@ -1,0 +1,30 @@
+name: CI - analytics
+
+on:
+  pull_request:
+    paths:
+      - "fase-2/analytics-service/**"
+      - ".github/workflows/ci-analytics.yml"
+      - ".github/workflows/_reusable-ci-service.yml"
+      - ".github/actions/aws-auth/**"
+  push:
+    branches: [main, lab]
+    paths:
+      - "fase-2/analytics-service/**"
+      - ".github/workflows/ci-analytics.yml"
+      - ".github/workflows/_reusable-ci-service.yml"
+      - ".github/actions/aws-auth/**"
+
+permissions:
+  contents: write   # job gitops-update commita o bump na branch lab
+  id-token: write   # OIDC no push para main (prod)
+
+jobs:
+  ci:
+    uses: ./.github/workflows/_reusable-ci-service.yml
+    with:
+      service_name: analytics
+      service_language: python
+      working_directory: fase-2/analytics-service
+      has_migrate_image: false
+    secrets: inherit

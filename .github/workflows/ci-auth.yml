@@ -1,0 +1,30 @@
+name: CI - auth
+
+on:
+  pull_request:
+    paths:
+      - "fase-2/auth-service/**"
+      - ".github/workflows/ci-auth.yml"
+      - ".github/workflows/_reusable-ci-service.yml"
+      - ".github/actions/aws-auth/**"
+  push:
+    branches: [main, lab]
+    paths:
+      - "fase-2/auth-service/**"
+      - ".github/workflows/ci-auth.yml"
+      - ".github/workflows/_reusable-ci-service.yml"
+      - ".github/actions/aws-auth/**"
+
+permissions:
+  contents: write   # job gitops-update commita o bump na branch lab
+  id-token: write   # OIDC no push para main (prod)
+
+jobs:
+  ci:
+    uses: ./.github/workflows/_reusable-ci-service.yml
+    with:
+      service_name: auth
+      service_language: go
+      working_directory: fase-2/auth-service
+      has_migrate_image: true
+    secrets: inherit
