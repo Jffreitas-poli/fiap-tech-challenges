@@ -193,9 +193,17 @@ jobs:
           exit-code: "1"
           format: table
 
-      - name: tag do commit
+      - name: calcular tag
         id: tag
-        run: echo "tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            TAG="${{ github.ref_name }}"
+            TAG="${TAG##*/v}"
+            TAG="v${TAG}"
+          else
+            TAG="0.0.0-lab.${{ github.run_number }}+${GITHUB_SHA::7}"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
       # ---- push: so fora de PR ----
       - name: auth AWS
@@ -216,16 +224,22 @@ jobs:
       - name: push (app)
         if: github.event_name != 'pull_request'
         run: |
-          IMG="${ECR_REGISTRY}/${ECR_NS}/${{ inputs.service_name }}-image:${{ github.sha }}"
-          docker tag "app:ci" "$IMG"
-          docker push "$IMG"
+          TAG="${{ steps.tag.outputs.tag }}"
+          IMG="${ECR_REGISTRY}/${ECR_NS}/${{ inputs.service_name }}-image"
+          docker tag "app:ci" "${IMG}:${TAG}"
+          docker tag "app:ci" "${IMG}:sha-${GITHUB_SHA::12}"
+          docker push "${IMG}:${TAG}"
+          docker push "${IMG}:sha-${GITHUB_SHA::12}"
 
       - name: push (migrate)
         if: github.event_name != 'pull_request' && inputs.has_migrate_image
         run: |
-          IMG="${ECR_REGISTRY}/${ECR_NS}/${{ inputs.service_name }}-migrate-image:${{ github.sha }}"
-          docker tag "migrate:ci" "$IMG"
-          docker push "$IMG"
+          TAG="${{ steps.tag.outputs.tag }}"
+          IMG="${ECR_REGISTRY}/${ECR_NS}/${{ inputs.service_name }}-migrate-image"
+          docker tag "migrate:ci" "${IMG}:${TAG}"
+          docker tag "migrate:ci" "${IMG}:sha-${GITHUB_SHA::12}"
+          docker push "${IMG}:${TAG}"
+          docker push "${IMG}:sha-${GITHUB_SHA::12}"
 
   # ---------------------------------- GitOps: bump da tag na branch lab (push/lab)
   gitops-update:
@@ -254,18 +268,31 @@ jobs:
         working-directory: fase-3/gitops/manifests/${{ inputs.service_name }}
         run: |
           set -euo pipefail
-          SHA="${{ needs.docker-build-scan-push.outputs.image_tag }}"
+          TAG="${{ needs.docker-build-scan-push.outputs.image_tag }}"
           SVC="${{ inputs.service_name }}"
           # 'name' no kustomization casa a imagem dos manifests da Fase 2 (ECR
           # antigo, conta 047719652987 / us-east-2). newName/newTag apontam para
           # esta conta.
           OLD_REG="047719652987.dkr.ecr.us-east-2.amazonaws.com/${ECR_NS}"
           kustomize edit set image \
-            "${OLD_REG}/${SVC}-image=${ECR_REGISTRY}/${ECR_NS}/${SVC}-image:${SHA}"
+            "${OLD_REG}/${SVC}-image=${ECR_REGISTRY}/${ECR_NS}/${SVC}-image:${TAG}"
           if [ "${{ inputs.has_migrate_image }}" = "true" ]; then
             MIG="${ECR_REGISTRY}/${ECR_NS}/${SVC}-migrate-image"
-            kustomize edit set image "${MIG}=${MIG}:${SHA}"
+            kustomize edit set image "${MIG}=${MIG}:${TAG}"
           fi
+
+      - name: validar registry
+        run: |
+          set -euo pipefail
+          echo "validar-registry: verificando fase-3/gitops/manifests/${{ inputs.service_name }}..."
+          kustomize build "fase-3/gitops/manifests/${{ inputs.service_name }}" \
+            | grep -oE '^\s*(- )?image:\s*\S+' | awk '{print $NF}' | sort -u \
+            | while read -r img; do
+              if [[ "$img" != "${ECR_REGISTRY}"/* ]]; then
+                echo "validar-registry: imagem não autorizada: $img" >&2
+                exit 1
+              fi
+            done || exit 1
 
       - name: commit + push (lab)
         run: |

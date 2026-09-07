@@ -1,6 +1,7 @@
 name: CI - targeting
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - "fase-2/targeting-service/**"
@@ -14,6 +15,10 @@ on:
       - ".github/workflows/ci-targeting.yml"
       - ".github/workflows/_reusable-ci-service.yml"
       - ".github/actions/aws-auth/**"
+    tags:
+      - "targeting/v*"
+  release:
+    types: [published]
 
 permissions:
   contents: write   # job gitops-update commita o bump na branch lab
