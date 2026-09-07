@@ -142,11 +142,21 @@ lint-actions:
 	@set -e; \
 	[ -d "$(WORKFLOWS_DIR)" ] || { echo "lint-actions: $(WORKFLOWS_DIR) não existe; pulando"; exit 0; }; \
 	\
-	echo "lint-actions: actionlint..."; \
-	actionlint "$(WORKFLOWS_DIR)"/*.yml "$(ACTIONS_DIR)"/*/action.yml 2>&1 || { \
+	echo "lint-actions: actionlint (workflows)..."; \
+	actionlint "$(WORKFLOWS_DIR)"/*.yml 2>&1 || { \
 		echo "lint-actions: actionlint falhou" >&2; \
 		exit 1; \
-	}
+	}; \
+	\
+	echo "lint-actions: metadata das composite actions..."; \
+	for a in "$(ACTIONS_DIR)"/*/action.yml; do \
+		[ -e "$$a" ] || continue; \
+		yq -e '.name and .runs.using' "$$a" >/dev/null 2>&1 || { \
+			echo "lint-actions: $$a: metadata invalida (.name / .runs.using)" >&2; \
+			exit 1; \
+		}; \
+		echo "lint-actions: $$a ok"; \
+	done
 
 # ============================================================================
 # LINT-GITOPS
