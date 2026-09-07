@@ -37,7 +37,9 @@ locals {
   dynamodb_owner = one([for s in local.services : s.name if s.dynamodb.enabled])
 
   ingress_nginx_values_path = "${path.module}/../../../../../fase-2/ingress-nginx-values.yaml"
-  gitops_root_app_path      = "${path.module}/../../../../gitops/root-app.yaml"
+  # Manifesto de bootstrap do GitOps: o ApplicationSet `toggle-master` que
+  # gera/adota as 7 Applications (substituiu a root-app app-of-apps).
+  gitops_root_app_path = "${path.module}/../../../../gitops/applicationset.yaml"
 }
 
 ########################################################################
@@ -279,10 +281,10 @@ resource "null_resource" "ingress_lb_cleanup" {
   depends_on = [module.addons]
 }
 
-# Application "app-of-apps" -- ArgoCD passa a sincronizar fase-3/gitops/.
-# Em prod o ArgoCD deve seguir a branch 'main' (root-app.yaml usa 'lab' por
-# padrao; sobrescreva o targetRevision antes de ativar prod, ou use um
-# root-app-prod.yaml dedicado).
+# ApplicationSet "toggle-master" -- ArgoCD passa a sincronizar fase-3/gitops/.
+# Em prod o ArgoCD deve seguir a branch 'main' (applicationset.yaml usa 'lab'
+# em revision/targetRevision por padrao; sobrescreva antes de ativar prod, ou
+# use um applicationset-prod.yaml dedicado).
 resource "null_resource" "root_app" {
   count = var.bootstrap_gitops_root_app ? 1 : 0
 
@@ -297,7 +299,7 @@ resource "null_resource" "root_app" {
       set -e
       aws eks update-kubeconfig --name ${self.triggers.cluster} --region ${self.triggers.region}
       for i in $(seq 1 30); do
-        kubectl get crd applications.argoproj.io >/dev/null 2>&1 && break
+        kubectl get crd applicationsets.argoproj.io >/dev/null 2>&1 && break
         echo "aguardando CRD do ArgoCD ($i/30)..."; sleep 10
       done
       kubectl apply -f ${local.gitops_root_app_path}
