@@ -117,6 +117,7 @@ resource "aws_security_group" "rds" {
   }
 
   egress {
+    description = "Trafego de saida liberado (pacotes de update do PostgreSQL, DNS)"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
@@ -159,6 +160,7 @@ resource "aws_security_group" "redis" {
   }
 
   egress {
+    description = "Trafego de saida liberado (DNS, telemetria do ElastiCache)"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
