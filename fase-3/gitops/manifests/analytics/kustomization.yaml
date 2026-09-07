@@ -63,6 +63,45 @@ patches:
   target:
     kind: ScaledObject
     name: analytics-service-scaler
+# KEDA no AWS Academy: sem IRSA, o TriggerAuthentication nao pode usar
+# podIdentity. Troca por credenciais estaticas da sessao (Secret
+# aws-session-creds, criado pelo null_resource.eso_aws_creds).
+- patch: |
+    - op: remove
+      path: /spec/podIdentity
+    - op: add
+      path: /spec/secretTargetRef
+      value:
+        - parameter: awsAccessKeyID
+          name: aws-session-creds
+          key: AWS_ACCESS_KEY_ID
+        - parameter: awsSecretAccessKey
+          name: aws-session-creds
+          key: AWS_SECRET_ACCESS_KEY
+        - parameter: awsSessionToken
+          name: aws-session-creds
+          key: AWS_SESSION_TOKEN
+  target:
+    group: keda.sh
+    version: v1alpha1
+    kind: TriggerAuthentication
+    name: keda-aws-credentials
+# scaledobject da fase-2 aponta para a fila/regiao antiga (us-east-2 /
+# conta 047719652987). Aponta para a fila real do lab.
+- patch: |
+    - op: replace
+      path: /spec/triggers/0/metadata/queueURL
+      value: https://sqs.us-east-1.amazonaws.com/361075236043/tc-sqs
+    - op: replace
+      path: /spec/triggers/0/metadata/awsRegion
+      value: us-east-1
+    - op: remove
+      path: /spec/triggers/0/metadata/identityOwner
+  target:
+    group: keda.sh
+    version: v1alpha1
+    kind: ScaledObject
+    name: analytics-service-scaler
 
 # 'name' casa com a imagem dos manifests da Fase 2 (ECR antigo). O CI atualiza
 # newTag (commit SHA) via 'kustomize edit set image'.
