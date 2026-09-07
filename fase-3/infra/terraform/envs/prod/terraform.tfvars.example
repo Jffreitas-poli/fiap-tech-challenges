@@ -1,8 +1,9 @@
 # Valores do ambiente prod (conta pessoal). Copie para terraform.tfvars e ajuste.
 # CIDRs nao podem colidir com o lab (10.20.0.0/16).
 
-region     = "us-east-1"
-account_id = "<ID_DA_CONTA_PESSOAL>"
+region      = "us-east-1"
+account_id  = "<ID_DA_CONTA_PESSOAL>"
+environment = "prod"
 
 # Outputs de fase-3/infra/bootstrap/prod:
 eks_cluster_role_arn = "arn:aws:iam::<ID>:role/tc-eks-cluster-prod"
@@ -18,10 +19,23 @@ private_subnet_cidrs = ["10.30.128.0/20", "10.30.144.0/20", "10.30.160.0/20"]
 
 admin_principal_arns = []
 
-node_instance_types = ["t3.large"]
-rds_instance_class  = "db.t3.small"
-redis_node_type     = "cache.t3.small"
+# Conta propria: o Terraform cria o OIDC provider do cluster e as roles de
+# IRSA do KEDA. No lab isto e false (o AWS Academy nao permite criar role).
+create_iam_role = true
 
-dynamodb_table_name = "tc-dynamo-prod"
-sqs_queue_name      = "tc-sqs-prod"
-redis_name          = "tc-redis-prod"
+node_instance_types = ["t3.large"]
+
+rds_instance_class          = "db.t3.small"
+rds_multi_az                = true
+rds_deletion_protection     = true
+rds_skip_final_snapshot     = false
+rds_backup_retention_period = 7
+
+dynamodb_point_in_time_recovery = true
+
+redis_node_type = "cache.t3.small"
+redis_name      = "tc-redis-prod"
+
+# Os nomes da fila SQS e da tabela DynamoDB deixaram de ser variaveis: vem de
+# queue.name / dynamodb.table em fase-3/services.yaml, com o sufixo do
+# ambiente -- tc-sqs-prod, tc-dynamo-prod.

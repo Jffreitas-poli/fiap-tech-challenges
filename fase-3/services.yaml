@@ -1,0 +1,129 @@
+# fase-3/services.yaml
+# Fonte unica de verdade dos microsservicos do Toggle Master (fase-3).
+#
+# Regra: aqui entra SO o que varia entre os 5 servicos. O que e igual aos 5
+# (namespace 'toggle', Service ClusterIP, probes /health, envFrom padrao,
+# securityContext runAsNonRoot:1000, strategy RollingUpdate, ExternalSecret +
+# ClusterSecretStore, Application/overlay do ArgoCD, passo de bump de imagem no
+# CI, registry ECR de destino) pertence a base/template, nao a este arquivo.
+# Nada de bloco por ambiente: a diferenca entre local/lab/prod e configuracao,
+# nao estrutura.
+#
+# Adicionar um servico = adicionar um item nesta lista e nada mais.
+#
+# ---------------------------------------------------------------------------
+# Sobre o schema
+#
+# O schema minimo pedido no contrato e:
+#   name, language, port, path, http{enabled,route}, queue{enabled,name},
+#   dynamodb{enabled,table}, db{enabled}
+#
+# Este arquivo carrega 6 campos ALEM dessa lista. Todos VARIAM entre os 5 e
+# todos sao lidos hoje por Terraform, Actions ou ArgoCD -- sem eles a fonte
+# unica nao consegue gerar os tres consumidores sozinha:
+#
+#   db.name         nome do banco inicial da instancia RDS. NAO e derivavel de
+#                   'name': flag usa 'flags_db', nao 'flag_db'. db_name e
+#                   ForceNew no aws_db_instance -- derivar errado SUBSTITUI a
+#                   instancia. Lido por infra/terraform/modules/service.
+#   cache.enabled   so evaluation (ElastiCache Redis; REDIS_URL vem do ESO)
+#   db.seed         so auth (Job PostSync auth-seed-service-key)
+#   db.migrate      so auth e 'dedicated' (imagem golang-migrate propria);
+#                   flag/targeting sao 'app' (Alembic da imagem da aplicacao).
+#                   E o que o CI le hoje como 'has_migrate_image'.
+#   queue.mode      evaluation e producer, analytics e consumer
+#   queue.keda      so analytics tem ScaledObject por profundidade de fila SQS
+#
+# Cortar qualquer um deles nao simplifica o schema: move a variacao para dentro
+# do template, que e exatamente o que o contrato proibe.
+# ---------------------------------------------------------------------------
+
+services:
+  - name: auth
+    language: go
+    port: 8001
+    path: fase-2/auth-service
+    http:     { enabled: true,  route: /auth }
+    db:       { enabled: true,  name: auth_db,      seed: true,  migrate: dedicated }
+    cache:    { enabled: false }
+    queue:    { enabled: false }
+    dynamodb: { enabled: false }
+
+  - name: flag
+    language: python
+    port: 8002
+    path: fase-2/flag-service
+    http:     { enabled: true,  route: /flag }
+    db:       { enabled: true,  name: flags_db,     seed: false, migrate: app }
+    cache:    { enabled: false }
+    queue:    { enabled: false }
+    dynamodb: { enabled: false }
+
+  - name: targeting
+    language: python
+    port: 8003
+    path: fase-2/targeting-service
+    http:     { enabled: true,  route: /targeting }
+    db:       { enabled: true,  name: targeting_db, seed: false, migrate: app }
+    cache:    { enabled: false }
+    queue:    { enabled: false }
+    dynamodb: { enabled: false }
+
+  - name: evaluation
+    language: go
+    port: 8004
+    path: fase-2/evaluation-service
+    http:     { enabled: true,  route: /evaluation }
+    db:       { enabled: false }
+    cache:    { enabled: true }
+    queue:    { enabled: true,  name: tc-sqs, mode: producer, keda: false }
+    dynamodb: { enabled: false }
+
+  - name: analytics
+    language: python
+    port: 8005
+    path: fase-2/analytics-service
+    http:     { enabled: true,  route: /analytics }
+    db:       { enabled: false }
+    cache:    { enabled: false }
+    queue:    { enabled: true,  name: tc-sqs, mode: consumer, keda: true }
+    dynamodb: { enabled: true,  table: tc-dynamo }
+
+# ---------------------------------------------------------------------------
+# Perguntas em aberto
+#
+# Dado que nao esta no repo NAO foi inventado aqui. Resolver antes ou junto das
+# etapas indicadas; cada resposta muda um valor deste arquivo.
+#
+# A. analytics: http.enabled e mesmo true?
+#    O ScaledObject da fase-2 tem minReplicaCount 0 (escala a zero com a fila
+#    vazia) e o overlay forca 1 por patch. Se o servico e worker puro, a rota
+#    '/analytics' no fase-2/ingress.yaml existe so para health/metrics e
+#    http.enabled deveria ser false. Nada no repo distingue os dois casos.
+#    Afeta: etapa 5 (ingress gerado) e etapa 3 (nada).
+#
+# B. Portas 8001..8005 sao contrato ou acidente?
+#    Vieram dos manifests da fase-2 e hoje aparecem em 4 lugares por servico
+#    (configmap PORT, containerPort, Service port/targetPort, backend do
+#    ingress). Mantidas como estao, ou normalizadas para um containerPort unico
+#    com so a porta do Service variando?
+#    Afeta: etapa 5. Mudar isso NAO e render-diff vazio -- exige delta declarado.
+#
+# C. db.migrate: 'dedicated' do auth se mantem?
+#    Hoje existe o repo ECR 'tech-challenge/auth-migrate-image' (golang-migrate
+#    + migrations/), declarado em local.ecr_repositories de envs/lab e
+#    envs/prod, e uma 2a entrada em images[] do kustomization do auth. Se a
+#    imagem dedicada cair (golang-migrate rodando a partir da imagem da app),
+#    o campo vira 'app' nos tres e o nº de repos ECR passa a ser == SVC_COUNT.
+#    Afeta: etapa 3 (invariante do nº de repos ECR) e etapa 4.
+#
+# D. Onde ficam os overlays do Kustomize?
+#    A etapa 7 especifica um git directory generator sobre
+#    'fase-3/*/k8s/overlays/*'. Esse caminho NAO existe: nao ha nenhum
+#    diretorio 'overlays' no repo, e os overlays reais estao em
+#    'fase-3/gitops/manifests/<svc>/'. O ACCEPTANCE.md escreve o contrato
+#    contra o caminho real. Move-los exigiria reescrever os
+#    'resources: ../../../../fase-2/...' das 7 kustomizations -- o acoplamento
+#    que o CLAUDE.md marca como quebravel.
+#    Afeta: etapa 7. Resolver por Emenda antes de comecar a etapa.
+# ---------------------------------------------------------------------------

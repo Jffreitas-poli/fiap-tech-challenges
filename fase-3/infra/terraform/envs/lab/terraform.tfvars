@@ -1,5 +1,6 @@
 region          = "us-east-1"
 account_id      = "361075236043"
+environment     = "lab"
 cluster_name    = "tc-eks"
 cluster_version = "1.31"
 
@@ -12,10 +13,23 @@ lab_role_name = "LabRole"
 
 admin_principal_arns = [] # NAO inclua a role dos nodes (LabRole) aqui -- colide com o entry EC2_LINUX
 
-node_instance_types = ["t3.medium"]
-rds_instance_class  = "db.t3.micro"
-redis_node_type     = "cache.t3.micro"
+# AWS Academy nao permite criar IAM role: sem OIDC provider, sem IRSA.
+# O KEDA le a fila com as credenciais estaticas de sessao (aws-session-creds).
+create_iam_role = false
 
-dynamodb_table_name = "tc-dynamo"
-sqs_queue_name      = "tc-sqs"
-redis_name          = "tc-redis"
+node_instance_types = ["t3.medium"]
+
+rds_instance_class          = "db.t3.micro"
+rds_multi_az                = false
+rds_deletion_protection     = false
+rds_skip_final_snapshot     = true
+rds_backup_retention_period = 1
+
+dynamodb_point_in_time_recovery = false
+
+redis_node_type = "cache.t3.micro"
+redis_name      = "tc-redis"
+
+# Os nomes da fila SQS e da tabela DynamoDB deixaram de ser variaveis: vem de
+# queue.name / dynamodb.table em fase-3/services.yaml, com o sufixo do
+# ambiente (vazio no lab).
