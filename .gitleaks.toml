@@ -1,0 +1,17 @@
+title = "toggle-master — gitleaks"
+
+# Estende o ruleset default do gitleaks (nao substitui).
+[extend]
+useDefault = true
+
+[allowlist]
+description = """
+Goldens de render do ArgoCD (fase-3/gitops/.render/). Sao a saida de
+`kustomize build` capturada por `make render-baseline` e comparada por
+`make render-diff`. Contem referencias de imagem ECR com tag = SHA git de
+40 hex (ex.: .../auth-image:5e35bd5d...), que o detector de `generic-api-key`
+confunde com segredo. Nao ha segredo aqui: Secrets vem do ESO, nunca do git.
+"""
+paths = [
+  '''fase-3/gitops/\.render/''',
+]
