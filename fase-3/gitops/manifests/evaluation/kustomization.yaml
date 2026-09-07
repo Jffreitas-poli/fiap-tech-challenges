@@ -16,8 +16,8 @@ namespace: toggle
 
 # 1 replica; HPA 1..3.
 replicas:
-- name: evaluation-deployment
-  count: 1
+- count: 1
+  name: evaluation-deployment
 
 # O configmap da fase-2 traz REDIS_URL / AWS_SQS_URL / AWS_REGION apontando
 # para a conta e regiao da fase-2 (us-east-2). Esses valores agora vem do
@@ -62,4 +62,4 @@ patches:
 images:
 - name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/evaluation-image
   newName: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/evaluation-image
-  newTag: 5e35bd5dce31f64b09f460cbdd95a575e9b07876
+  newTag: 0.0.0-lab.13-6d33632
