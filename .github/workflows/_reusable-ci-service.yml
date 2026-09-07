@@ -159,7 +159,10 @@ jobs:
     outputs:
       image_tag: ${{ steps.tag.outputs.tag }}
     env:
-      ENVIRONMENT: ${{ github.ref_name == 'main' && 'prod' || 'lab' }}
+      # main -> prod, mas SO quando o prod ja existe (vars.PROD_AWS_ROLE_ARN
+      # setado apos rodar bootstrap/prod). Ate la, push na main tambem usa o
+      # ambiente lab (chaves de sessao do Academy) -- igual ao apps-ci antigo.
+      ENVIRONMENT: ${{ (github.ref_name == 'main' && vars.PROD_AWS_ROLE_ARN != '') && 'prod' || 'lab' }}
     steps:
       - uses: actions/checkout@v4
 
