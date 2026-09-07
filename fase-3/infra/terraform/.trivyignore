@@ -1,0 +1,14 @@
+# Baseline de misconfig aceita no ambiente lab (AWS Academy).
+# Mesma logica do .checkov.yaml: sao trade-offs conscientes do ambiente
+# efemero de estudo. Revisar ao ativar o prod (conta pessoal).
+#
+# EKS com endpoint publico + CIDR 0.0.0.0/0: o runner do GitHub Actions
+# roda kubectl (apply do app-of-apps, bump do GitOps) sem VPN nem peering.
+AVD-AWS-0040
+AVD-AWS-0041
+AWS-0040
+AWS-0041
+# SG egress 0.0.0.0/0 -1: saida liberada (updates de pacotes, DNS). O
+# ingress e restrito ao SG dos nodes EKS.
+AVD-AWS-0104
+AWS-0104

@@ -4,10 +4,11 @@ metadata:
   name: targeting-migrate
   namespace: toggle
   annotations:
-    # roda uma vez por sync do ArgoCD, ANTES do rollout do Deployment
-    argocd.argoproj.io/hook: PreSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
-    argocd.argoproj.io/sync-wave: "-1" # depois do ExternalSecret (hook PreSync wave -2)
+    # resource normal (nao hook): waves ordenam ExternalSecret(-3) -> Job(-2)
+    # -> Deployment(0). Replace=true recria o Job (spec imutavel) quando a
+    # imagem muda.
+    argocd.argoproj.io/sync-wave: "-2"
+    argocd.argoproj.io/sync-options: Replace=true
 spec:
   backoffLimit: 3
   activeDeadlineSeconds: 600

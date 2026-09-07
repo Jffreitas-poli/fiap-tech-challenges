@@ -1,0 +1,49 @@
+# Config do Checkov -- gate BLOQUEANTE no CI (infra-tf-plan / infra-tf-apply).
+#
+# soft_fail = false: qualquer finding NOVO (fora da baseline abaixo) quebra o
+# pipeline. A baseline `skip-check` abaixo lista os controles que NAO se aplicam
+# ao ambiente lab (AWS Academy / Vocareum) ou que sao trade-offs conscientes de
+# custo para um ambiente efemero de estudo. Cada grupo tem a justificativa.
+#
+# Ao ativar o ambiente `prod` (conta pessoal), revisar esta lista: a maioria
+# destes controles DEVE ser atendida em prod (KMS CMK, Multi-AZ, deletion
+# protection, flow logs, perf insights, endpoint EKS privado).
+
+framework:
+  - terraform
+compact: true
+quiet: true
+download-external-modules: false
+soft-fail: false
+
+skip-check:
+  # --- AWS Academy nao permite criar KMS Customer Managed Keys ---
+  - CKV_AWS_119   # DynamoDB com KMS CMK
+  - CKV_AWS_136   # ECR com KMS CMK
+  - CKV_AWS_149   # Secrets Manager com KMS CMK
+  - CKV_AWS_191   # ElastiCache com KMS CMK
+  - CKV_AWS_58    # EKS secrets encryption (exige KMS CMK)
+
+  # --- Custo/ruido em ambiente efemero de lab (habilitar em prod) ---
+  - CKV_AWS_118   # RDS enhanced monitoring
+  - CKV_AWS_129   # RDS log exports (Postgres logs -> CloudWatch)
+  - CKV2_AWS_30   # RDS query logging (parameter group dedicado)
+  - CKV_AWS_353   # RDS performance insights
+  - CKV_AWS_157   # RDS Multi-AZ
+  - CKV2_AWS_60   # RDS copy_tags_to_snapshot
+  - CKV_AWS_293   # RDS deletion protection (lab precisa de teardown rapido)
+  - CKV_AWS_161   # RDS IAM database authentication
+  - CKV2_AWS_11   # VPC flow logs
+  - CKV2_AWS_50   # ElastiCache Multi-AZ automatic failover
+  - CKV2_AWS_57   # Secrets Manager rotacao automatica (segredos de sessao ~4h)
+  - CKV_AWS_28    # DynamoDB point-in-time recovery (tabela de eventos, reprocessavel)
+
+  # --- Trade-offs de design do lab, documentados no README ---
+  - CKV_AWS_30    # ElastiCache transit encryption (desligado: evaluation-service sem TLS)
+  - CKV_AWS_31    # ElastiCache transit encryption + auth token
+  - CKV_AWS_38    # EKS endpoint publico acessivel (runner do GitHub Actions faz kubectl)
+  - CKV_AWS_39    # EKS endpoint publico habilitado
+  - CKV_AWS_37    # EKS control plane logging (todos os tipos)
+  - CKV_AWS_130   # Subnets publicas com map_public_ip_on_launch (NLB do ingress)
+  - CKV2_AWS_12   # Default SG da VPC restringindo todo trafego (gerenciado pela AWS)
+  - CKV_AWS_382   # SG egress 0.0.0.0/0 -1 (saida liberada; ingress e restrito por SG)

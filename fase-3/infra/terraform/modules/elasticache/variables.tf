@@ -7,6 +7,11 @@ variable "node_type" {
   description = "Tipo do node de cache."
   type        = string
   default     = "cache.t3.micro"
+
+  validation {
+    condition     = can(regex("^cache\\.", var.node_type))
+    error_message = "node_type deve comecar com 'cache.' (ex.: cache.t3.micro)."
+  }
 }
 
 variable "engine_version" {
@@ -19,6 +24,11 @@ variable "num_cache_clusters" {
   description = "Numero de nodes (1 = sem replica; >1 habilita failover automatico)."
   type        = number
   default     = 1
+
+  validation {
+    condition     = var.num_cache_clusters >= 1 && var.num_cache_clusters <= 6
+    error_message = "num_cache_clusters deve estar entre 1 e 6."
+  }
 }
 
 variable "subnet_ids" {

@@ -95,7 +95,7 @@ jobs:
         if: inputs.service_language == 'go'
         uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.3.0
+          version: v2.8.0
           working-directory: ${{ inputs.working_directory }}
 
       # ---- Python: ruff (config em fase-2/.ruff.toml) ----
@@ -132,7 +132,10 @@ jobs:
         if: inputs.service_language == 'go'
         working-directory: ${{ inputs.working_directory }}
         run: |
-          go install github.com/securego/gosec/v2/cmd/gosec@v2.21.4
+          # binario pre-compilado (evita 'go install' recompilar gosec com o
+          # toolchain do runner e quebrar em deps antigas).
+          curl -sfL https://raw.githubusercontent.com/securego/gosec/master/install.sh \
+            | sh -s -- -b "$(go env GOPATH)/bin" v2.22.7
           "$(go env GOPATH)/bin/gosec" -severity high -confidence medium -exclude-dir=vendor ./...
 
       # ---- SAST Python: bandit ----
@@ -156,7 +159,10 @@ jobs:
     outputs:
       image_tag: ${{ steps.tag.outputs.tag }}
     env:
-      ENVIRONMENT: ${{ github.ref_name == 'main' && 'prod' || 'lab' }}
+      # main -> prod, mas SO quando o prod ja existe (vars.PROD_AWS_ROLE_ARN
+      # setado apos rodar bootstrap/prod). Ate la, push na main tambem usa o
+      # ambiente lab (chaves de sessao do Academy) -- igual ao apps-ci antigo.
+      ENVIRONMENT: ${{ (github.ref_name == 'main' && vars.PROD_AWS_ROLE_ARN != '') && 'prod' || 'lab' }}
     steps:
       - uses: actions/checkout@v4
 

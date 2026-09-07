@@ -1,12 +1,22 @@
 variable "repositories" {
   description = "Nomes dos repositorios ECR a criar (um por microsservico)."
   type        = list(string)
+
+  validation {
+    condition     = length(var.repositories) >= 1
+    error_message = "Informe pelo menos um repositorio ECR."
+  }
 }
 
 variable "image_tag_mutability" {
   description = "MUTABLE ou IMMUTABLE. Fase 2 usa tags imutaveis com SemVer."
   type        = string
   default     = "IMMUTABLE"
+
+  validation {
+    condition     = contains(["MUTABLE", "IMMUTABLE"], var.image_tag_mutability)
+    error_message = "image_tag_mutability deve ser 'MUTABLE' ou 'IMMUTABLE'."
+  }
 }
 
 variable "scan_on_push" {
