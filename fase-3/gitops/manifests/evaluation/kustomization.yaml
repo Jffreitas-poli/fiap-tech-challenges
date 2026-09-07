@@ -15,10 +15,10 @@ resources:
 
 namespace: toggle
 
-# 2 replicas fixas; HPA 2..4.
+# 1 replica; HPA 1..3.
 replicas:
 - name: evaluation-deployment
-  count: 2
+  count: 1
 
 # O configmap da fase-2 traz REDIS_URL / AWS_SQS_URL / AWS_REGION apontando
 # para a conta e regiao da fase-2 (us-east-2). Esses valores agora vem do
@@ -50,10 +50,10 @@ patches:
 - patch: |
     - op: replace
       path: /spec/minReplicas
-      value: 2
+      value: 1
     - op: replace
       path: /spec/maxReplicas
-      value: 4
+      value: 3
   target:
     kind: HorizontalPodAutoscaler
     name: evaluation-hpa

@@ -14,10 +14,10 @@ resources:
 
 namespace: toggle
 
-# 2 replicas por servico
+# 1 replica por servico (lab: teto de pods baixo)
 replicas:
 - name: targeting-deployment
-  count: 2
+  count: 1
 
 # 'name' casa com a imagem dos manifests da Fase 2 (ECR antigo). A mesma
 # entrada reescreve o Deployment e o Job de migration. O CI atualiza newTag
