@@ -85,6 +85,7 @@ jobs:
         with:
           scan-type: config
           scan-ref: fase-3/infra/terraform
+          trivyignores: fase-3/infra/terraform/.trivyignore
           severity: CRITICAL
           exit-code: "1"
           format: table

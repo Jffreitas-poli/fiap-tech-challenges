@@ -95,7 +95,7 @@ jobs:
         if: inputs.service_language == 'go'
         uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.3.0
+          version: v2.8.0
           working-directory: ${{ inputs.working_directory }}
 
       # ---- Python: ruff (config em fase-2/.ruff.toml) ----

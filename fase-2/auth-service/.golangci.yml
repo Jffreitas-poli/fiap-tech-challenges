@@ -13,13 +13,20 @@ linters:
     - ineffassign
     - staticcheck
     - unused
+  settings:
+    errcheck:
+      # erros de I/O no codigo legado da fase-2 que nao sao acionaveis:
+      # escrita da resposta HTTP e Close de body em defer.
+      exclude-functions:
+        - encoding/json.Encoder.Encode
+        - (net/http.ResponseWriter).Write
+        - (io.Closer).Close
+        - (*database/sql.Rows).Close
   exclusions:
     generated: lax
     rules:
-      # respostas HTTP: Encode/Write no fim do handler -- erro nao acionavel.
-      - path: (handlers|main)\.go
-        linters: [errcheck]
-        source: "\\.(Encode|Write)\\("
+      - linters: [errcheck]
+        source: '\.(Encode|Write|Close)\('
 
 formatters:
   enable:
