@@ -1,9 +1,11 @@
 ########################################################################
 # Composicao do ambiente PROD -- ToggleMaster Fase 3 (conta pessoal).
 #
-# Espelha envs/lab, mas: alta disponibilidade (NAT/RDS Multi-AZ, 3 AZs),
-# instancias maiores, deletion protection ligada, e IAM proprio (roles
-# criadas em fase-3/infra/bootstrap/prod, passadas via variaveis).
+# Espelha envs/lab. A diferenca esta no provider (OIDC, conta propria) e no
+# tfvars: alta disponibilidade (NAT/RDS Multi-AZ, 3 AZs), instancias maiores,
+# deletion protection ligada e create_iam_role = true -- em prod o Terraform
+# cria o OIDC provider do cluster e as roles de IRSA do KEDA, que o Academy
+# nao permite no lab.
 #
 # NAO aplicado sob o AWS Academy. Ativacao: ver envs/prod/README.md.
 #
@@ -13,7 +15,7 @@
 
 locals {
   name = "tc"
-  env  = "prod"
+  env  = var.environment
 
   common_tags = {
     Project     = "ToggleMaster"
@@ -24,20 +26,15 @@ locals {
     Account     = var.account_id
   }
 
-  rds_services = {
-    auth      = { identifier = "tc-rds-auth-prod", db_name = "auth_db" }
-    flag      = { identifier = "tc-rds-flag-prod", db_name = "flags_db" }
-    targeting = { identifier = "tc-rds-targeting-prod", db_name = "targeting_db" }
-  }
+  # Fonte unica -- mesmo arquivo lido por envs/lab.
+  services = yamldecode(file("${path.module}/../../../../services.yaml")).services
 
-  ecr_repositories = [
-    "tech-challenge/auth-image",
-    "tech-challenge/flag-image",
-    "tech-challenge/targeting-image",
-    "tech-challenge/evaluation-image",
-    "tech-challenge/analytics-image",
-    "tech-challenge/auth-migrate-image",
-  ]
+  # Sufixo de ambiente: '-prod'. Da tc-rds-auth-prod, tc-sqs-prod,
+  # tc-dynamo-prod, que sao os nomes ja declarados neste ambiente.
+  name_suffix = local.env == "lab" ? "" : "-${local.env}"
+
+  queue_consumer = one([for s in local.services : s.name if s.queue.enabled && try(s.queue.mode, "") == "consumer"])
+  dynamodb_owner = one([for s in local.services : s.name if s.dynamodb.enabled])
 
   ingress_nginx_values_path = "${path.module}/../../../../../fase-2/ingress-nginx-values.yaml"
   gitops_root_app_path      = "${path.module}/../../../../gitops/root-app.yaml"
@@ -81,18 +78,18 @@ module "eks" {
   admin_principal_arns = var.admin_principal_arns
 }
 
-########################################################################
-# ECR
-########################################################################
+# Provider OIDC do cluster -- base do IRSA. Bloco identico ao de envs/lab; em
+# prod create_iam_role = true e ele existe de fato.
+resource "aws_iam_openid_connect_provider" "eks" {
+  count = var.create_iam_role ? 1 : 0
 
-module "ecr" {
-  source = "../../modules/ecr"
-
-  repositories = local.ecr_repositories
+  url             = module.eks.cluster_oidc_issuer_url
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = [var.eks_oidc_thumbprint]
 }
 
 ########################################################################
-# RDS -- Multi-AZ + deletion protection
+# SG + subnet group compartilhados para RDS
 ########################################################################
 
 resource "aws_db_subnet_group" "rds" {
@@ -126,20 +123,34 @@ resource "aws_security_group" "rds" {
   tags = { Name = "tc-rds-sg-prod" }
 }
 
-module "rds" {
-  source   = "../../modules/rds"
-  for_each = local.rds_services
+########################################################################
+# UM servico = UMA instancia deste modulo. Bloco identico ao de envs/lab:
+# tudo que difere entra por variavel.
+########################################################################
 
-  identifier              = each.value.identifier
-  db_name                 = each.value.db_name
-  username                = "postgres"
-  instance_class          = var.rds_instance_class
-  db_subnet_group_name    = aws_db_subnet_group.rds.name
-  vpc_security_group_ids  = [aws_security_group.rds.id]
-  multi_az                = true
-  deletion_protection     = true
-  skip_final_snapshot     = false
-  backup_retention_period = 7
+module "service" {
+  source   = "../../modules/service"
+  for_each = { for s in local.services : s.name => s }
+
+  spec        = each.value
+  name_prefix = local.name
+  name_suffix = local.name_suffix
+  region      = var.region
+  account_id  = var.account_id
+
+  rds_instance_class          = var.rds_instance_class
+  rds_db_subnet_group_name    = aws_db_subnet_group.rds.name
+  rds_vpc_security_group_ids  = [aws_security_group.rds.id]
+  rds_multi_az                = var.rds_multi_az
+  rds_deletion_protection     = var.rds_deletion_protection
+  rds_skip_final_snapshot     = var.rds_skip_final_snapshot
+  rds_backup_retention_period = var.rds_backup_retention_period
+
+  dynamodb_point_in_time_recovery = var.dynamodb_point_in_time_recovery
+
+  create_iam_role   = var.create_iam_role
+  oidc_provider_arn = one(aws_iam_openid_connect_provider.eks[*].arn)
+  oidc_issuer_url   = module.eks.cluster_oidc_issuer_url
 }
 
 ########################################################################
@@ -182,22 +193,6 @@ module "elasticache" {
 }
 
 ########################################################################
-# Mensageria + store do analytics-service
-########################################################################
-
-module "sqs" {
-  source = "../../modules/sqs"
-  name   = var.sqs_queue_name
-}
-
-module "dynamodb" {
-  source                 = "../../modules/dynamodb"
-  name                   = var.dynamodb_table_name
-  hash_key               = "event_id"
-  point_in_time_recovery = true
-}
-
-########################################################################
 # Secrets Manager :: segredos de aplicacao (nao-RDS)
 ########################################################################
 
@@ -233,7 +228,7 @@ resource "aws_secretsmanager_secret_version" "evaluation_app" {
   secret_string = jsonencode({
     SERVICE_API_KEY = random_password.evaluation_api_key.result
     REDIS_URL       = module.elasticache.redis_url
-    AWS_SQS_URL     = module.sqs.queue_url
+    AWS_SQS_URL     = module.service[local.queue_consumer].queue_url
     AWS_REGION      = var.region
   })
 }
@@ -247,8 +242,8 @@ resource "aws_secretsmanager_secret" "analytics_app" {
 resource "aws_secretsmanager_secret_version" "analytics_app" {
   secret_id = aws_secretsmanager_secret.analytics_app.id
   secret_string = jsonencode({
-    AWS_SQS_URL        = module.sqs.queue_url
-    AWS_DYNAMODB_TABLE = module.dynamodb.table_name
+    AWS_SQS_URL        = module.service[local.queue_consumer].queue_url
+    AWS_DYNAMODB_TABLE = module.service[local.dynamodb_owner].dynamodb_table_name
     AWS_REGION         = var.region
   })
 }

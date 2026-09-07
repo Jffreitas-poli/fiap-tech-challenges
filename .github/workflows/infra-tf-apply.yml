@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: infra-tf-apply-${{ github.event.inputs.environment || github.ref_name }}
@@ -27,6 +28,10 @@ env:
 jobs:
   # branch == ambiente: push na lab -> envs/lab, push na main -> envs/prod.
   # workflow_dispatch usa o input escolhido.
+  #
+  # lab aplica direto ao mergear. main so aplica depois do gate 'verify-lab'
+  # (mesmo terraform/** com apply de sucesso na lab) + aprovacao manual do
+  # GitHub Environment 'prod'.
   #
   # Guard: prod so e aplicado quando o bootstrap/prod ja existe -- sinalizado
   # por vars.PROD_AWS_ROLE_ARN. Sem isso, o job 'apply' e pulado, entao um
@@ -63,9 +68,77 @@ jobs:
             echo "should_apply=true" >> "$GITHUB_OUTPUT"
           fi
 
-  apply:
+  # Gate de promocao: push na lab aplica direto; push na main so aplica
+  # depois que o MESMO fase-3/infra/terraform ja rodou com sucesso na
+  # branch lab. Para lab (env != prod) este job e pulado.
+  verify-lab:
     needs: resolve
-    if: needs.resolve.outputs.should_apply == 'true'
+    if: needs.resolve.outputs.should_apply == 'true' && needs.resolve.outputs.environment == 'prod'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: terraform/** ja aplicado com sucesso no lab?
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          # historia completa da lab para resolver os SHAs dos runs
+          git fetch --no-tags origin '+refs/heads/lab:refs/remotes/origin/lab'
+
+          want="$(git rev-parse "HEAD:fase-3/infra/terraform")"
+          echo "tree de fase-3/infra/terraform em ${{ github.sha }}: $want"
+
+          mapfile -t shas < <(gh run list \
+            --workflow infra-tf-apply.yml \
+            --branch lab \
+            --status success \
+            --limit 30 \
+            --json headSha --jq '.[].headSha')
+
+          if [ "${#shas[@]}" -eq 0 ]; then
+            echo "::error::Nenhum run de sucesso do infra-tf-apply na branch lab."
+            exit 1
+          fi
+
+          for sha in "${shas[@]}"; do
+            got="$(git rev-parse "$sha:fase-3/infra/terraform" 2>/dev/null || true)"
+            if [ "$got" = "$want" ]; then
+              echo "OK: lab aplicou este mesmo terraform/** em $sha"
+              {
+                echo "### infra-tf-apply — gate de lab"
+                echo ""
+                echo "\`fase-3/infra/terraform\` idêntico ao aplicado com sucesso no lab (\`$sha\`)."
+                echo "Segue para aprovação manual do ambiente \`prod\`."
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+          done
+
+          {
+            echo "### infra-tf-apply — bloqueado"
+            echo ""
+            echo "\`fase-3/infra/terraform\` em \`main\` não corresponde a nenhum apply"
+            echo "de sucesso na branch \`lab\` (últimos 30 runs)."
+            echo ""
+            echo "Faça merge na \`lab\` e deixe o \`infra-tf-apply\` concluir antes de promover para \`prod\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::error::terraform/** nao validado no lab."
+          exit 1
+
+  apply:
+    needs: [ resolve, verify-lab ]
+    # verify-lab e pulado no fluxo da lab -> 'skipped' tambem libera.
+    if: >-
+      always() &&
+      needs.resolve.outputs.should_apply == 'true' &&
+      (needs.verify-lab.result == 'success' || needs.verify-lab.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       id-token: write   # OIDC no prod

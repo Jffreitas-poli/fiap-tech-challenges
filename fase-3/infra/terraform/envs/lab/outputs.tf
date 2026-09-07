@@ -16,20 +16,23 @@ output "kubeconfig_command" {
 }
 
 output "ecr_repository_urls" {
-  description = "URLs dos repositorios ECR (nome -> url)."
-  value       = module.ecr.repository_urls
+  description = "URLs de todos os repositorios ECR (nome -> url), reunidos dos servicos."
+  value       = merge([for s in module.service : s.ecr_repository_urls]...)
 }
 
 output "sqs_queue_url" {
-  value = module.sqs.queue_url
+  description = "URL da fila compartilhada, declarada pelo servico consumidor."
+  value       = module.service[local.queue_consumer].queue_url
 }
 
 output "sqs_dlq_url" {
-  value = module.sqs.dlq_url
+  description = "URL da DLQ da fila compartilhada."
+  value       = module.service[local.queue_consumer].dlq_url
 }
 
 output "dynamodb_table" {
-  value = module.dynamodb.table_name
+  description = "Nome da tabela DynamoDB do servico que a declara."
+  value       = module.service[local.dynamodb_owner].dynamodb_table_name
 }
 
 output "redis_url" {
@@ -38,19 +41,27 @@ output "redis_url" {
 }
 
 output "rds_endpoints" {
-  description = "Host de cada instancia RDS (servico -> host)."
-  value       = { for k, m in module.rds : k => m.endpoint }
+  description = "Host de cada instancia RDS (servico -> host). So os servicos com db.enabled."
+  value       = { for s in local.services : s.name => module.service[s.name].rds_endpoint if s.db.enabled }
 }
 
 output "rds_secret_arns" {
   description = "ARN do secret no Secrets Manager de cada RDS (servico -> arn)."
-  value       = { for k, m in module.rds : k => m.secret_arn }
+  value       = { for s in local.services : s.name => module.service[s.name].rds_secret_arn if s.db.enabled }
 }
 
 output "rds_database_urls" {
   description = "Connection string de cada RDS (servico -> url). Sensivel."
-  value       = { for k, m in module.rds : k => m.database_url }
+  value       = { for s in local.services : s.name => module.service[s.name].rds_database_url if s.db.enabled }
   sensitive   = true
+}
+
+output "keda_irsa_annotations" {
+  description = "Anotacao de IRSA a aplicar no ServiceAccount do KEDA, por servico com queue.keda. Vazio no lab: o Academy nao cria role e o KEDA usa aws-session-creds."
+  value = {
+    for s in local.services : s.name => module.service[s.name].keda_irsa_annotation
+    if try(s.queue.keda, false)
+  }
 }
 
 output "app_secret_names" {

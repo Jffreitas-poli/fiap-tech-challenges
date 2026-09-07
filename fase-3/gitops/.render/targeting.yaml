@@ -1,0 +1,155 @@
+apiVersion: v1
+data:
+  AUTH_SERVICE_URL: http://auth-service:8001
+  PORT: "8003"
+kind: ConfigMap
+metadata:
+  name: targeting-configmap
+  namespace: toggle
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: targeting-service
+  namespace: toggle
+spec:
+  ports:
+    - port: 8003
+      protocol: TCP
+      targetPort: 8003
+  selector:
+    app: targeting
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: targeting
+  name: targeting-deployment
+  namespace: toggle
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: targeting
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: targeting
+    spec:
+      containers:
+        - envFrom:
+            - configMapRef:
+                name: targeting-configmap
+            - secretRef:
+                name: targeting-secret
+          image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/targeting-image:0ec35360d76036cdcaa1d4c5247556be65b29693
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          name: targeting-container
+          ports:
+            - containerPort: 8003
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+          resources:
+            limits:
+              cpu: 40m
+              memory: 128Mi
+            requests:
+              cpu: 20m
+              memory: 64Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: Replace=true
+    argocd.argoproj.io/sync-wave: "-2"
+  name: targeting-migrate
+  namespace: toggle
+spec:
+  activeDeadlineSeconds: 600
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: targeting
+        job: migrate
+    spec:
+      containers:
+        - command:
+            - alembic
+            - upgrade
+            - head
+          envFrom:
+            - secretRef:
+                name: targeting-secret
+          image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/targeting-image:0ec35360d76036cdcaa1d4c5247556be65b29693
+          name: migrate
+          resources:
+            limits:
+              cpu: 50m
+              memory: 128Mi
+            requests:
+              cpu: 10m
+              memory: 64Mi
+          workingDir: /app
+      initContainers:
+        - command:
+            - sh
+            - -c
+            - |
+              until pg_isready -d "$DATABASE_URL"; do
+                echo "aguardando o banco..."; sleep 2;
+              done
+          envFrom:
+            - secretRef:
+                name: targeting-secret
+          image: postgres:16-alpine
+          name: wait-for-db
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+  ttlSecondsAfterFinished: 300
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+  name: targeting-secret
+  namespace: toggle
+spec:
+  data:
+    - remoteRef:
+        key: tc-rds-targeting-credentials
+        property: url
+      secretKey: DATABASE_URL
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: aws-secrets-manager
+  target:
+    creationPolicy: Owner
+    deletionPolicy: Retain
+    name: targeting-secret

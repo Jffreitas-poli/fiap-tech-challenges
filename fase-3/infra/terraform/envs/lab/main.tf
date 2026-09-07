@@ -5,11 +5,16 @@
 # a ordem pelo grafo de dependencias. No PRIMEIRO apply, encene:
 #   terraform apply -target=module.networking -target=module.eks
 #   terraform apply
+#
+# Os recursos POR SERVICO (RDS, SQS, DynamoDB, ECR, IRSA do KEDA) nao estao
+# escritos aqui: saem de um for_each sobre fase-3/services.yaml, em
+# modules/service. Adicionar um servico = adicionar um item naquele arquivo.
+# Ver moved.tf para a migracao de endereco dos recursos ja em producao.
 ########################################################################
 
 locals {
   name = "tc"
-  env  = "lab"
+  env  = var.environment
 
   common_tags = {
     Project     = "ToggleMaster"
@@ -20,23 +25,20 @@ locals {
     Account     = var.account_id
   }
 
-  # database-per-service: identifier da instancia RDS -> nome do banco
-  rds_services = {
-    auth      = { identifier = "tc-rds-auth", db_name = "auth_db" }
-    flag      = { identifier = "tc-rds-flag", db_name = "flags_db" }
-    targeting = { identifier = "tc-rds-targeting", db_name = "targeting_db" }
-  }
+  # Fonte unica. O caminho sobe 4 niveis: envs/lab -> envs -> terraform ->
+  # infra -> fase-3.
+  services = yamldecode(file("${path.module}/../../../../services.yaml")).services
 
-  ecr_repositories = [
-    "tech-challenge/auth-image",
-    "tech-challenge/flag-image",
-    "tech-challenge/targeting-image",
-    "tech-challenge/evaluation-image",
-    "tech-challenge/analytics-image",
-    # imagem de migration do auth (golang-migrate). flag/targeting rodam a
-    # migration (Alembic) a partir da propria imagem da aplicacao.
-    "tech-challenge/auth-migrate-image",
-  ]
+  # Sufixo de ambiente nos nomes de recurso. Vazio no lab -- os nomes em
+  # producao hoje sao tc-rds-auth, tc-sqs, tc-dynamo, sem sufixo. Mudar isso
+  # e ForceNew no RDS e recriacao da fila.
+  name_suffix = local.env == "lab" ? "" : "-${local.env}"
+
+  # Donos derivados do yaml, para o root nao carregar nome de servico escrito
+  # a mao. A fila e compartilhada (evaluation produz, analytics consome) e
+  # pertence ao consumidor; ver local.create_queue em modules/service.
+  queue_consumer = one([for s in local.services : s.name if s.queue.enabled && try(s.queue.mode, "") == "consumer"])
+  dynamodb_owner = one([for s in local.services : s.name if s.dynamodb.enabled])
 
   ingress_nginx_values_path = "${path.module}/../../../../../fase-2/ingress-nginx-values.yaml"
   gitops_root_app_path      = "${path.module}/../../../../gitops/root-app.yaml"
@@ -82,14 +84,16 @@ module "eks" {
   admin_principal_arns = var.admin_principal_arns
 }
 
-########################################################################
-# ECR
-########################################################################
+# Provider OIDC do cluster -- base do IRSA. Bloco identico em lab e prod de
+# proposito: a diferenca fica no tfvars. Sob o AWS Academy
+# create_iam_role = false e ele nao rende recurso nenhum; o KEDA le a fila
+# com as credenciais estaticas de sessao (null_resource.eso_aws_creds).
+resource "aws_iam_openid_connect_provider" "eks" {
+  count = var.create_iam_role ? 1 : 0
 
-module "ecr" {
-  source = "../../modules/ecr"
-
-  repositories = local.ecr_repositories
+  url             = module.eks.cluster_oidc_issuer_url
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = [var.eks_oidc_thumbprint]
 }
 
 ########################################################################
@@ -127,23 +131,41 @@ resource "aws_security_group" "rds" {
   tags = { Name = "tc-rds-sg" }
 }
 
-module "rds" {
-  source   = "../../modules/rds"
-  for_each = local.rds_services
+########################################################################
+# UM servico = UMA instancia deste modulo. RDS, SQS, DynamoDB, ECR e o
+# IRSA do KEDA saem das flags de cada entrada em services.yaml.
+########################################################################
 
-  identifier             = each.value.identifier
-  db_name                = each.value.db_name
-  username               = "postgres"
-  instance_class         = var.rds_instance_class
-  db_subnet_group_name   = aws_db_subnet_group.rds.name
-  vpc_security_group_ids = [aws_security_group.rds.id]
-  multi_az               = false
-  deletion_protection    = false
-  skip_final_snapshot    = true
+module "service" {
+  source   = "../../modules/service"
+  for_each = { for s in local.services : s.name => s }
+
+  spec        = each.value
+  name_prefix = local.name
+  name_suffix = local.name_suffix
+  region      = var.region
+  account_id  = var.account_id
+
+  rds_instance_class          = var.rds_instance_class
+  rds_db_subnet_group_name    = aws_db_subnet_group.rds.name
+  rds_vpc_security_group_ids  = [aws_security_group.rds.id]
+  rds_multi_az                = var.rds_multi_az
+  rds_deletion_protection     = var.rds_deletion_protection
+  rds_skip_final_snapshot     = var.rds_skip_final_snapshot
+  rds_backup_retention_period = var.rds_backup_retention_period
+
+  dynamodb_point_in_time_recovery = var.dynamodb_point_in_time_recovery
+
+  create_iam_role   = var.create_iam_role
+  oidc_provider_arn = one(aws_iam_openid_connect_provider.eks[*].arn)
+  oidc_issuer_url   = module.eks.cluster_oidc_issuer_url
 }
 
 ########################################################################
 # ElastiCache (Redis) para o evaluation-service
+#
+# Fica no root, nao em modules/service: o SG e o subnet group sao do
+# ambiente, e ha um unico replication group compartilhado.
 ########################################################################
 
 resource "aws_security_group" "redis" {
@@ -179,21 +201,6 @@ module "elasticache" {
   subnet_ids                 = module.networking.private_subnet_ids
   security_group_ids         = [aws_security_group.redis.id]
   transit_encryption_enabled = false
-}
-
-########################################################################
-# Mensageria + store do analytics-service
-########################################################################
-
-module "sqs" {
-  source = "../../modules/sqs"
-  name   = var.sqs_queue_name
-}
-
-module "dynamodb" {
-  source   = "../../modules/dynamodb"
-  name     = var.dynamodb_table_name
-  hash_key = "event_id"
 }
 
 ########################################################################
@@ -238,7 +245,7 @@ resource "aws_secretsmanager_secret_version" "evaluation_app" {
   secret_string = jsonencode({
     SERVICE_API_KEY = random_password.evaluation_api_key.result
     REDIS_URL       = module.elasticache.redis_url
-    AWS_SQS_URL     = module.sqs.queue_url
+    AWS_SQS_URL     = module.service[local.queue_consumer].queue_url
     AWS_REGION      = var.region
   })
 }
@@ -252,8 +259,8 @@ resource "aws_secretsmanager_secret" "analytics_app" {
 resource "aws_secretsmanager_secret_version" "analytics_app" {
   secret_id = aws_secretsmanager_secret.analytics_app.id
   secret_string = jsonencode({
-    AWS_SQS_URL        = module.sqs.queue_url
-    AWS_DYNAMODB_TABLE = module.dynamodb.table_name
+    AWS_SQS_URL        = module.service[local.queue_consumer].queue_url
+    AWS_DYNAMODB_TABLE = module.service[local.dynamodb_owner].dynamodb_table_name
     AWS_REGION         = var.region
   })
 }
