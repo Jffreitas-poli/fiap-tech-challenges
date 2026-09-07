@@ -10,6 +10,17 @@
 /fase-2/flag-service/.env
 /fase-2/evaluation-service/.env
 
+# fase-2 - artefatos de teste/build locais (CI gera e descarta)
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+fase-2/**/coverage.out
+fase-2/**/coverage.xml
+fase-2/**/coverage.html
+/fase-2/auth-service/auth-service
+/fase-2/evaluation-service/evaluation-service
+
 #fase-3
 # Terraform
 **/.terraform/*

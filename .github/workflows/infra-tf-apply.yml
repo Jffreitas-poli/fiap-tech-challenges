@@ -69,6 +69,26 @@ jobs:
       # necessario para o null_resource.root_app (kubectl apply do app-of-apps)
       - uses: azure/setup-kubectl@v4
 
+      # ---- gates estaticos antes de tocar a AWS (mesmo do infra-tf-plan) ----
+      - name: terraform fmt
+        working-directory: fase-3/infra/terraform
+        run: terraform fmt -check -recursive
+
+      - name: checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: fase-3/infra/terraform
+          config_file: fase-3/infra/terraform/.checkov.yaml
+
+      - name: trivy config (IaC)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: config
+          scan-ref: fase-3/infra/terraform
+          severity: CRITICAL
+          exit-code: "1"
+          format: table
+
       - name: terraform init
         run: terraform init -input=false
 
