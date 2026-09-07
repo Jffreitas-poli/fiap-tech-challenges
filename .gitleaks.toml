@@ -14,4 +14,7 @@ confunde com segredo. Nao ha segredo aqui: Secrets vem do ESO, nunca do git.
 """
 paths = [
   '''fase-3/gitops/\.render/''',
+  # README de topo: bloco de codigo reproduz a SAIDA DE EXEMPLO do proprio
+  # gitleaks (fixture cafebabe:deadbeef da regra sidekiq-secret). Nao e segredo.
+  '''^README\.md$''',
 ]
