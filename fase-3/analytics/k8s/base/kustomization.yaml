@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Base real do analytics-service, consolidada da fase-2 (Emenda 001 do
+# ACCEPTANCE). Conteudo identico a
+# fase-2/analytics-service/k8s/{configmap,deployment,service,kedaauthentication,
+# scaledobject}.yaml: a migracao nao pode mudar o render.
+#
+# hpa.yaml da fase-2 fica DE FORA (min 3) -- conflita com o ScaledObject do KEDA
+# (min 0). O KEDA e o unico autoscaler do analytics.
+# analytics-service usa SQS + DynamoDB (schemaless) -> sem Job de migration.
+# analytics nao tem segredo de aplicacao; o Secret analytics-secret (config
+# derivada da infra) e materializado pelo ESO -> ver overlay lab.
+#
+# NAO declara 'images:' aqui (invariante 5f): o transformer de imagem e unico e
+# vive no overlay de cada ambiente. A chave logica
+# 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/analytics-image:1.0
+# no deployment.yaml e identificador, nao endereco -- cada overlay a reescreve.
+resources:
+- configmap.yaml
+- deployment.yaml
+- service.yaml
+- kedaauthentication.yaml
+- scaledobject.yaml

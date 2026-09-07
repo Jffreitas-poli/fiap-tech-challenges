@@ -1,21 +1,17 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Reaproveita os manifests da Fase 2 sem duplicar.
-# analytics-service nao tem segredo, mas AWS_SQS_URL / AWS_DYNAMODB_TABLE /
-# AWS_REGION do configmap da fase-2 apontam para a conta/regiao antiga
-# (us-east-2). Esses valores vem do Secrets Manager via analytics-secret
-# (externalsecret.yaml), adicionado ao envFrom pelo patch abaixo.
+# Overlay lab. A base real vive em fase-3/analytics/k8s/base (consolidada da
+# fase-2, Emenda 001), incluindo kedaauthentication.yaml e scaledobject.yaml;
+# o hpa.yaml (min 3) fica de fora la mesmo -- conflita com o ScaledObject do
+# KEDA (min 0), que passa a ser o unico autoscaler.
+# Aqui ficam so os add-ons do lab: o ESO (analytics-secret, config derivada da
+# infra que substitui AWS_SQS_URL / AWS_DYNAMODB_TABLE / AWS_REGION da conta
+# antiga) e os patches (envFrom, minReplicaCount, credenciais de sessao do KEDA,
+# fila/regiao do lab).
 # analytics-service usa SQS + DynamoDB (schemaless) -> sem Job de migration.
 resources:
-- ../../../../fase-2/analytics-service/k8s/configmap.yaml
-- ../../../../fase-2/analytics-service/k8s/deployment.yaml
-- ../../../../fase-2/analytics-service/k8s/service.yaml
-# hpa.yaml (min 3) removido: conflita com o ScaledObject do KEDA (min 0).
-# O KEDA passa a ser o unico autoscaler -> analytics fica em 0 pod com a
-# fila SQS vazia.
-- ../../../../fase-2/analytics-service/k8s/kedaauthentication.yaml
-- ../../../../fase-2/analytics-service/k8s/scaledobject.yaml
+- ../../../analytics/k8s/base
 - externalsecret.yaml
 
 namespace: toggle

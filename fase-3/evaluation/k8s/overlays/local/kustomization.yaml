@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Ambiente local (Kind/Minikube, up.sh). Sobe a aplicacao a partir da imagem
+# que a base ja declara -- ECR antigo :1.0 -- ou de um build local trocado com
+# 'kustomize edit set image tech-challenge/evaluation-image=evaluation:dev'.
+# Sem ESO, sem credencial de sessao AWS, sem ajuste de HPA/replicas: isso e do lab.
+resources:
+- ../../base
+
+namespace: toggle
+
+images:
+- name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/evaluation-image
+  newTag: "1.0"
