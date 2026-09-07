@@ -113,6 +113,14 @@ resource "helm_release" "argocd" {
         }
         params = {
           "server.insecure" = true # TLS termina no ingress-nginx
+
+          # Sem isto o `--policy` global (default `sync`) prevalece e o
+          # `applicationsSync: create-only` do ApplicationSet toggle-master
+          # (fase-3/gitops/applicationset.yaml) e ignorado -- ele passaria a
+          # atualizar/deletar Applications durante a adocao. Lido como env
+          # ARGOCD_APPLICATIONSET_CONTROLLER_ENABLE_POLICY_OVERRIDE pelo
+          # applicationset-controller (argo-helm 7.6.12).
+          "applicationsetcontroller.enable.policy.override" = true
         }
       }
       server = {

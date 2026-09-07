@@ -7,12 +7,18 @@ O ArgoCD é instalado no cluster pelo Terraform (`modules/addons`,
 ## Estrutura
 
 ```
-root-app.yaml            # Application "app-of-apps"; aplicado pelo Terraform
-apps/                    # 1 Application por microsserviço (gerenciadas pela root-app)
-  auth.yaml  flag.yaml  targeting.yaml  evaluation.yaml  analytics.yaml
+applicationset.yaml      # ApplicationSet "toggle-master"; aplicado pelo Terraform.
+                         # Um git directory generator sobre manifests/* gera/adota
+                         # as 7 Applications (auth-service … analytics-service,
+                         # platform, ingress). Substituiu root-app.yaml + apps/.
 manifests/               # overlays Kustomize que reaproveitam os manifests da Fase 2
   <svc>/kustomization.yaml
 ```
+
+Transição (`applicationsSync: create-only` + `preserveResourcesOnDeletion: true`):
+o ApplicationSet **adota** as Applications existentes sem reescrever spec nem
+prunar. Só depois de confirmar `ownerReference` + `Synced/Healthy` nas 7 é que a
+política aperta para `sync` — num segundo commit.
 
 Cada `manifests/<svc>/kustomization.yaml`:
 

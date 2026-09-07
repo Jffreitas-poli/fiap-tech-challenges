@@ -41,7 +41,9 @@ locals {
   dynamodb_owner = one([for s in local.services : s.name if s.dynamodb.enabled])
 
   ingress_nginx_values_path = "${path.module}/../../../../../fase-2/ingress-nginx-values.yaml"
-  gitops_root_app_path      = "${path.module}/../../../../gitops/root-app.yaml"
+  # Manifesto de bootstrap do GitOps: o ApplicationSet `toggle-master` que
+  # gera/adota as 7 Applications (substituiu a root-app app-of-apps).
+  gitops_root_app_path = "${path.module}/../../../../gitops/applicationset.yaml"
 }
 
 data "aws_iam_role" "lab" {
@@ -339,13 +341,21 @@ resource "null_resource" "eso_aws_creds" {
   depends_on = [module.addons]
 }
 
-# Application "app-of-apps" -- ArgoCD passa a sincronizar fase-3/gitops/
+# ApplicationSet "toggle-master" -- ArgoCD passa a sincronizar fase-3/gitops/
 #
-# Aplicada via local-exec (kubectl), NAO via kubernetes_manifest: aquele
+# Aplicado via local-exec (kubectl), NAO via kubernetes_manifest: aquele
 # recurso exige conexao viva com a API do cluster ja no `plan`, o que quebra
 # o 1o apply de um ambiente vazio e o `tf-plan` do CI. O null_resource so
 # executa no apply, depois que os add-ons (inclusive ArgoCD + CRDs) subiram.
-# Idempotente (kubectl apply); re-roda quando root-app.yaml muda.
+# Idempotente (kubectl apply); re-roda quando applicationset.yaml muda.
+#
+# NOTA DE CUTOVER (cluster que ja roda a antiga root-app `toggle-master-root`):
+# aplicar este manifesto so ADOTA as 7 Applications (create-only). A root-app
+# antiga fica orfa apontando para `apps/` -- agora vazio -- e com prune ativo
+# prunaria as 7. Antes de mesclar a remocao de `apps/`, desarme-a:
+#   kubectl -n argocd patch app toggle-master-root --type merge \
+#     -p '{"spec":{"syncPolicy":null}}'
+# e so entao `kubectl delete app toggle-master-root -n argocd`.
 resource "null_resource" "root_app" {
   count = var.bootstrap_gitops_root_app ? 1 : 0
 
@@ -360,7 +370,7 @@ resource "null_resource" "root_app" {
       set -e
       aws eks update-kubeconfig --name ${self.triggers.cluster} --region ${self.triggers.region}
       for i in $(seq 1 30); do
-        kubectl get crd applications.argoproj.io >/dev/null 2>&1 && break
+        kubectl get crd applicationsets.argoproj.io >/dev/null 2>&1 && break
         echo "aguardando CRD do ArgoCD ($i/30)..."; sleep 10
       done
       kubectl apply -f ${local.gitops_root_app_path}

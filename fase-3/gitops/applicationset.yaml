@@ -1,0 +1,104 @@
+# fase-3/gitops/applicationset.yaml
+#
+# Substitui, num unico manifesto, a root Application `toggle-master-root`
+# (antigo app-of-apps que varria `apps/` com directory.recurse) e as 7
+# Applications de `apps/*.yaml`.
+#
+# ADOCAO, NAO RECRIACAO
+# ---------------------
+# O template gera EXATAMENTE os nomes que ja existem no cluster hoje
+# (ver fase-3/BASELINE.md):
+#
+#   diretorio em manifests/   ->  metadata.name da Application
+#   auth                          auth-service
+#   flag                          flag-service
+#   targeting                     targeting-service
+#   evaluation                    evaluation-service
+#   analytics                     analytics-service
+#   platform                      platform
+#   ingress                       ingress
+#
+# Divergencia de um caractere = Application orfa e, com prune ativo, pod
+# derrubado. Os 5 servicos ganham sufixo `-service`; `platform` e `ingress`
+# nao sao servicos e mantem o nome nu.
+#
+# POLITICA DE TRANSICAO
+# --------------------
+# `applicationsSync: create-only` + `preserveResourcesOnDeletion: true`:
+#   - o controller adota (ownerReference) as 7 Applications existentes SEM
+#     reescrever spec nem deletar nada;
+#   - deletar este ApplicationSet nao deleta as Applications nem os recursos.
+# So depois de confirmar `ownerReference` + status Synced/Healthy nas 7 e que
+# `toggle-master-root` foi desarmado/removido sem prune, a politica aperta
+# para `sync` -- num segundo commit.
+#
+# `applicationsSync` por ApplicationSet so tem efeito com
+# `applicationsetcontroller.enable.policy.override: true` no
+# argocd-cmd-params-cm (habilitado em modules/addons). Sem isso o `--policy`
+# global (default `sync`) prevalece.
+#
+# Sintaxe conferida contra a doc oficial do ArgoCD (chart argo-cd 7.6.12):
+#   operator-manual/applicationset/Controlling-Resource-Modification
+#   operator-manual/applicationset/Generators-Git  (goTemplate: path.path/path.basename)
+#   operator-manual/applicationset/Template        (templatePatch exige goTemplate)
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: toggle-master
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions:
+    - missingkey=error
+
+  generators:
+    # Um unico git directory generator sobre os 7 overlays do lab.
+    # Emenda 001: o overlay lab permanece em manifests/<svc>/; NAO ha
+    # `fase-3/<svc>/k8s/overlays/lab/` e nao deve haver. Nao ha matrix com
+    # [lab, prod] enquanto envs/prod nao for ativado (fora das etapas 3-7).
+    - git:
+        repoURL: https://github.com/NyEstevo/fiap-tech-challenges.git
+        revision: lab
+        directories:
+          - path: fase-3/gitops/manifests/*
+
+  template:
+    metadata:
+      # auth -> auth-service ... ; platform/ingress -> nome nu.
+      name: '{{ ternary .path.basename (printf "%s-service" .path.basename) (has .path.basename (list "platform" "ingress")) }}'
+      namespace: argocd
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/NyEstevo/fiap-tech-challenges.git
+        targetRevision: lab
+        path: '{{ .path.path }}'
+      destination:
+        server: https://kubernetes.default.svc
+        # platform materializa o ClusterSecretStore em external-secrets;
+        # os demais vao para toggle.
+        namespace: '{{ ternary "external-secrets" "toggle" (eq .path.basename "platform") }}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+
+  # Campos de string sao renderizados um a um; nao da para omitir uma chave
+  # inteira no template. O sync-wave -1 do platform (garante o
+  # ClusterSecretStore antes dos ExternalSecrets dos servicos) entra por
+  # templatePatch, que e renderizado como documento unico.
+  templatePatch: |
+    {{- if eq .path.basename "platform" }}
+    metadata:
+      annotations:
+        argocd.argoproj.io/sync-wave: "-1"
+    {{- end }}
+
+  syncPolicy:
+    applicationsSync: create-only
+    preserveResourcesOnDeletion: true
