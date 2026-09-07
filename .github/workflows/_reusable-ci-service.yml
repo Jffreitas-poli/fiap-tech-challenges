@@ -201,7 +201,9 @@ jobs:
             TAG="${TAG##*/v}"
             TAG="v${TAG}"
           else
-            TAG="0.0.0-lab.${{ github.run_number }}+${GITHUB_SHA::7}"
+            # '+' e build metadata de SemVer, mas nao e tag OCI valida
+            # ([a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}). Separador '-'.
+            TAG="0.0.0-lab.${{ github.run_number }}-${GITHUB_SHA::7}"
           fi
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
