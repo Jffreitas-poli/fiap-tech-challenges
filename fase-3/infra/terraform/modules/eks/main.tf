@@ -1,18 +1,23 @@
 ########################################################################
 # modulo eks
-# Cluster EKS + 1 managed node group. AMBOS usam a LabRole do AWS Academy
-# (passada em var.lab_role_arn). O modulo NAO cria nenhuma IAM Role,
-# Policy ou OIDC provider -- restricao do ambiente Vocareum.
+# Cluster EKS + 1 managed node group. O modulo NAO cria IAM Role/Policy/OIDC.
+#
+# lab  : cluster e nodes usam a LabRole (var.lab_role_arn) -- Vocareum bloqueia
+#        iam:CreateRole.
+# prod : passe cluster_role_arn / node_role_arn separados (criados em
+#        bootstrap/prod). Quando vazios, ambos caem para lab_role_arn.
 ########################################################################
 
 locals {
-  all_subnet_ids = concat(var.subnet_ids, var.public_subnet_ids)
+  all_subnet_ids   = concat(var.subnet_ids, var.public_subnet_ids)
+  cluster_role_arn = var.cluster_role_arn != "" ? var.cluster_role_arn : var.lab_role_arn
+  node_role_arn    = var.node_role_arn != "" ? var.node_role_arn : var.lab_role_arn
 }
 
 resource "aws_eks_cluster" "this" {
   name     = var.cluster_name
   version  = var.cluster_version
-  role_arn = var.lab_role_arn
+  role_arn = local.cluster_role_arn
 
   vpc_config {
     subnet_ids              = local.all_subnet_ids
@@ -32,7 +37,7 @@ resource "aws_eks_cluster" "this" {
 resource "aws_eks_node_group" "default" {
   cluster_name    = aws_eks_cluster.this.name
   node_group_name = "${var.cluster_name}-ng"
-  node_role_arn   = var.lab_role_arn
+  node_role_arn   = local.node_role_arn
   subnet_ids      = var.subnet_ids
   instance_types  = var.node_instance_types
   ami_type        = var.node_ami_type
@@ -79,14 +84,14 @@ resource "aws_eks_addon" "this" {
 # metrics-server / kubectl top|logs|exec quebram com "tls: internal error".
 resource "aws_eks_access_entry" "node" {
   cluster_name  = aws_eks_cluster.this.name
-  principal_arn = var.lab_role_arn
+  principal_arn = local.node_role_arn
   type          = "EC2_LINUX"
 }
 
 # Admins humanos. A role dos nodes NUNCA entra aqui (colidiria com o
 # entry EC2_LINUX acima -- um principal so pode ter um entry).
 locals {
-  admin_arns = toset([for a in var.admin_principal_arns : a if a != var.lab_role_arn])
+  admin_arns = toset([for a in var.admin_principal_arns : a if a != local.node_role_arn])
 }
 
 resource "aws_eks_access_entry" "admins" {
