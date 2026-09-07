@@ -11,12 +11,19 @@ resources:
 - ../../../../fase-2/analytics-service/k8s/configmap.yaml
 - ../../../../fase-2/analytics-service/k8s/deployment.yaml
 - ../../../../fase-2/analytics-service/k8s/service.yaml
-- ../../../../fase-2/analytics-service/k8s/hpa.yaml
+# hpa.yaml (min 3) removido: conflita com o ScaledObject do KEDA (min 0).
+# O KEDA passa a ser o unico autoscaler -> analytics fica em 0 pod com a
+# fila SQS vazia.
 - ../../../../fase-2/analytics-service/k8s/kedaauthentication.yaml
 - ../../../../fase-2/analytics-service/k8s/scaledobject.yaml
 - externalsecret.yaml
 
 namespace: toggle
+
+# lab: enquanto o KEDA nao reconcilia, mantem 1 (nao 3).
+replicas:
+- name: analytics-deployment
+  count: 1
 
   # tira os valores obsoletos do configmap
   # o deployment da fase-2 so tem configMapRef -> adiciona os secretRef.

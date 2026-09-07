@@ -14,6 +14,11 @@ resources:
 
 namespace: toggle
 
+# lab: 1 replica por servico (2x t3.medium -> teto de pods baixo)
+replicas:
+- name: flag-deployment
+  count: 1
+
 # 'name' casa com a imagem dos manifests da Fase 2 (ECR antigo). A mesma
 # entrada reescreve o Deployment e o Job de migration. O CI atualiza newTag
 # (commit SHA) via 'kustomize edit set image'.

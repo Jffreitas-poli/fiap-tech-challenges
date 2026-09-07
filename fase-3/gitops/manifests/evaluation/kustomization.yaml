@@ -15,6 +15,11 @@ resources:
 
 namespace: toggle
 
+# lab: 2x t3.medium tem teto baixo de pods -> 1 replica e HPA 1..3.
+replicas:
+- name: evaluation-deployment
+  count: 1
+
 # O configmap da fase-2 traz REDIS_URL / AWS_SQS_URL / AWS_REGION apontando
 # para a conta e regiao da fase-2 (us-east-2). Esses valores agora vem do
 # Secrets Manager via evaluation-secret; removidos do configmap para nao
@@ -42,6 +47,16 @@ patches:
   target:
     kind: Deployment
     name: evaluation-deployment
+- patch: |
+    - op: replace
+      path: /spec/minReplicas
+      value: 1
+    - op: replace
+      path: /spec/maxReplicas
+      value: 3
+  target:
+    kind: HorizontalPodAutoscaler
+    name: evaluation-hpa
 
 # 'name' casa com a imagem dos manifests da Fase 2 (ECR antigo). O CI atualiza
 # newTag (commit SHA) via 'kustomize edit set image'.
