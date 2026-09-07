@@ -6,12 +6,12 @@ kind: Kustomization
 # pelo External Secrets Operator a partir do AWS Secrets Manager
 # (externalsecret.yaml + ClusterSecretStore em manifests/platform).
 resources:
-  - ../../../../fase-2/auth-service/k8s/configmap.yaml
-  - ../../../../fase-2/auth-service/k8s/deployment.yaml
-  - ../../../../fase-2/auth-service/k8s/service.yaml
-  - externalsecret.yaml
-  - migrate-job.yaml
-  - seed-job.yaml
+- ../../../../fase-2/auth-service/k8s/configmap.yaml
+- ../../../../fase-2/auth-service/k8s/deployment.yaml
+- ../../../../fase-2/auth-service/k8s/service.yaml
+- externalsecret.yaml
+- migrate-job.yaml
+- seed-job.yaml
 
 namespace: toggle
 
@@ -21,7 +21,7 @@ namespace: toggle
 images:
 - name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/auth-image
   newName: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/auth-image
-  newTag: 8750fe531b1d8fb20d9504d6d57f9bec5c75ce69
+  newTag: 5e35bd5dce31f64b09f460cbdd95a575e9b07876
 - name: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/auth-migrate-image
   newName: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/auth-migrate-image
-  newTag: 8750fe531b1d8fb20d9504d6d57f9bec5c75ce69
+  newTag: 5e35bd5dce31f64b09f460cbdd95a575e9b07876
