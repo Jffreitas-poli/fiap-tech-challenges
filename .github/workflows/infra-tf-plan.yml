@@ -57,12 +57,24 @@ jobs:
           tflint --init
           tflint --recursive -f compact
 
+      # IaC scan BLOQUEANTE. checkov usa .checkov.yaml (soft-fail: false +
+      # baseline de skips justificados p/ AWS Academy). trivy config barra
+      # misconfig CRITICA.
       - name: checkov
         uses: bridgecrewio/checkov-action@v12
         with:
           directory: fase-3/infra/terraform
-          quiet: true
-          soft_fail: true   # endurecer para false apos o primeiro ciclo de triagem
+          config_file: fase-3/infra/terraform/.checkov.yaml
+
+      - name: trivy config (IaC)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: config
+          scan-ref: fase-3/infra/terraform
+          trivyignores: fase-3/infra/terraform/.trivyignore
+          severity: CRITICAL
+          exit-code: "1"
+          format: table
 
       - name: terraform plan
         id: plan

@@ -1,15 +1,19 @@
 ########################################################################
-# Composicao do ambiente LAB -- ToggleMaster Fase 3
+# Composicao do ambiente PROD -- ToggleMaster Fase 3 (conta pessoal).
 #
-# Um unico root module chama todos os modulos-filho. O Terraform resolve
-# a ordem pelo grafo de dependencias. No PRIMEIRO apply, encene:
-#   terraform apply -target=module.networking -target=module.eks
-#   terraform apply
+# Espelha envs/lab, mas: alta disponibilidade (NAT/RDS Multi-AZ, 3 AZs),
+# instancias maiores, deletion protection ligada, e IAM proprio (roles
+# criadas em fase-3/infra/bootstrap/prod, passadas via variaveis).
+#
+# NAO aplicado sob o AWS Academy. Ativacao: ver envs/prod/README.md.
+#
+# 1o apply:  terraform apply -target=module.networking -target=module.eks
+#            terraform apply
 ########################################################################
 
 locals {
   name = "tc"
-  env  = "lab"
+  env  = "prod"
 
   common_tags = {
     Project     = "ToggleMaster"
@@ -20,11 +24,10 @@ locals {
     Account     = var.account_id
   }
 
-  # database-per-service: identifier da instancia RDS -> nome do banco
   rds_services = {
-    auth      = { identifier = "tc-rds-auth", db_name = "auth_db" }
-    flag      = { identifier = "tc-rds-flag", db_name = "flags_db" }
-    targeting = { identifier = "tc-rds-targeting", db_name = "targeting_db" }
+    auth      = { identifier = "tc-rds-auth-prod", db_name = "auth_db" }
+    flag      = { identifier = "tc-rds-flag-prod", db_name = "flags_db" }
+    targeting = { identifier = "tc-rds-targeting-prod", db_name = "targeting_db" }
   }
 
   ecr_repositories = [
@@ -33,8 +36,6 @@ locals {
     "tech-challenge/targeting-image",
     "tech-challenge/evaluation-image",
     "tech-challenge/analytics-image",
-    # imagem de migration do auth (golang-migrate). flag/targeting rodam a
-    # migration (Alembic) a partir da propria imagem da aplicacao.
     "tech-challenge/auth-migrate-image",
   ]
 
@@ -42,12 +43,8 @@ locals {
   gitops_root_app_path      = "${path.module}/../../../../gitops/root-app.yaml"
 }
 
-data "aws_iam_role" "lab" {
-  name = var.lab_role_name
-}
-
 ########################################################################
-# Networking
+# Networking -- NAT Gateway por AZ (HA)
 ########################################################################
 
 module "networking" {
@@ -60,11 +57,11 @@ module "networking" {
   public_subnet_cidrs  = var.public_subnet_cidrs
   private_subnet_cidrs = var.private_subnet_cidrs
   eks_cluster_name     = var.cluster_name
-  single_nat_gateway   = true
+  single_nat_gateway   = false
 }
 
 ########################################################################
-# EKS
+# EKS -- IAM proprio (bootstrap/prod), sem LabRole
 ########################################################################
 
 module "eks" {
@@ -74,11 +71,13 @@ module "eks" {
   cluster_version      = var.cluster_version
   subnet_ids           = module.networking.private_subnet_ids
   public_subnet_ids    = module.networking.public_subnet_ids
-  lab_role_arn         = data.aws_iam_role.lab.arn
+  lab_role_arn         = var.eks_node_role_arn # fallback nao usado (roles abaixo tem prioridade)
+  cluster_role_arn     = var.eks_cluster_role_arn
+  node_role_arn        = var.eks_node_role_arn
   node_instance_types  = var.node_instance_types
-  node_min             = 1
-  node_desired         = 2
-  node_max             = 4
+  node_min             = 2
+  node_desired         = 3
+  node_max             = 6
   admin_principal_arns = var.admin_principal_arns
 }
 
@@ -93,18 +92,18 @@ module "ecr" {
 }
 
 ########################################################################
-# SG + subnet group compartilhados para RDS
+# RDS -- Multi-AZ + deletion protection
 ########################################################################
 
 resource "aws_db_subnet_group" "rds" {
-  name       = "tc-rds-subnets"
+  name       = "tc-rds-subnets-prod"
   subnet_ids = module.networking.private_subnet_ids
 
-  tags = { Name = "tc-rds-subnets" }
+  tags = { Name = "tc-rds-subnets-prod" }
 }
 
 resource "aws_security_group" "rds" {
-  name        = "tc-rds-sg"
+  name        = "tc-rds-sg-prod"
   description = "Permite 5432 a partir dos nodes EKS"
   vpc_id      = module.networking.vpc_id
 
@@ -117,37 +116,38 @@ resource "aws_security_group" "rds" {
   }
 
   egress {
-    description = "Trafego de saida liberado (pacotes de update do PostgreSQL, DNS)"
+    description = "Trafego de saida liberado (updates do PostgreSQL, DNS)"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = { Name = "tc-rds-sg" }
+  tags = { Name = "tc-rds-sg-prod" }
 }
 
 module "rds" {
   source   = "../../modules/rds"
   for_each = local.rds_services
 
-  identifier             = each.value.identifier
-  db_name                = each.value.db_name
-  username               = "postgres"
-  instance_class         = var.rds_instance_class
-  db_subnet_group_name   = aws_db_subnet_group.rds.name
-  vpc_security_group_ids = [aws_security_group.rds.id]
-  multi_az               = false
-  deletion_protection    = false
-  skip_final_snapshot    = true
+  identifier              = each.value.identifier
+  db_name                 = each.value.db_name
+  username                = "postgres"
+  instance_class          = var.rds_instance_class
+  db_subnet_group_name    = aws_db_subnet_group.rds.name
+  vpc_security_group_ids  = [aws_security_group.rds.id]
+  multi_az                = true
+  deletion_protection     = true
+  skip_final_snapshot     = false
+  backup_retention_period = 7
 }
 
 ########################################################################
-# ElastiCache (Redis) para o evaluation-service
+# ElastiCache (Redis) -- replica + failover
 ########################################################################
 
 resource "aws_security_group" "redis" {
-  name        = "tc-redis-sg"
+  name        = "tc-redis-sg-prod"
   description = "Permite 6379 a partir dos nodes EKS"
   vpc_id      = module.networking.vpc_id
 
@@ -160,14 +160,14 @@ resource "aws_security_group" "redis" {
   }
 
   egress {
-    description = "Trafego de saida liberado (DNS, telemetria do ElastiCache)"
+    description = "Trafego de saida liberado (DNS, telemetria)"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = { Name = "tc-redis-sg" }
+  tags = { Name = "tc-redis-sg-prod" }
 }
 
 module "elasticache" {
@@ -175,7 +175,7 @@ module "elasticache" {
 
   name                       = var.redis_name
   node_type                  = var.redis_node_type
-  num_cache_clusters         = 1
+  num_cache_clusters         = 2
   subnet_ids                 = module.networking.private_subnet_ids
   security_group_ids         = [aws_security_group.redis.id]
   transit_encryption_enabled = false
@@ -191,17 +191,14 @@ module "sqs" {
 }
 
 module "dynamodb" {
-  source   = "../../modules/dynamodb"
-  name     = var.dynamodb_table_name
-  hash_key = "event_id"
+  source                 = "../../modules/dynamodb"
+  name                   = var.dynamodb_table_name
+  hash_key               = "event_id"
+  point_in_time_recovery = true
 }
 
 ########################################################################
 # Secrets Manager :: segredos de aplicacao (nao-RDS)
-# O modulo rds ja publica tc-rds-<svc>-credentials. Aqui ficam os
-# segredos de app: MASTER_KEY (auth) e SERVICE_API_KEY (evaluation).
-# O External Secrets Operator le estes + os do rds e materializa o
-# Secret <svc>-secret no namespace toggle.
 ########################################################################
 
 resource "random_password" "auth_master_key" {
@@ -210,9 +207,9 @@ resource "random_password" "auth_master_key" {
 }
 
 resource "aws_secretsmanager_secret" "auth_app" {
-  name                    = "tc-auth-app"
-  description             = "Segredos de aplicacao do auth-service (ToggleMaster)."
-  recovery_window_in_days = 0
+  name                    = "tc-auth-app-prod"
+  description             = "Segredos de aplicacao do auth-service (prod)."
+  recovery_window_in_days = 7
 }
 
 resource "aws_secretsmanager_secret_version" "auth_app" {
@@ -226,15 +223,13 @@ resource "random_password" "evaluation_api_key" {
 }
 
 resource "aws_secretsmanager_secret" "evaluation_app" {
-  name                    = "tc-evaluation-app"
-  description             = "Segredos + config runtime do evaluation-service (ToggleMaster)."
-  recovery_window_in_days = 0
+  name                    = "tc-evaluation-app-prod"
+  description             = "Segredos + config runtime do evaluation-service (prod)."
+  recovery_window_in_days = 7
 }
 
 resource "aws_secretsmanager_secret_version" "evaluation_app" {
   secret_id = aws_secretsmanager_secret.evaluation_app.id
-  # SERVICE_API_KEY e segredo; REDIS_URL/AWS_* sao config de ambiente derivada
-  # dos modulos -- centralizada aqui para o configmap so guardar valor estatico.
   secret_string = jsonencode({
     SERVICE_API_KEY = random_password.evaluation_api_key.result
     REDIS_URL       = module.elasticache.redis_url
@@ -244,9 +239,9 @@ resource "aws_secretsmanager_secret_version" "evaluation_app" {
 }
 
 resource "aws_secretsmanager_secret" "analytics_app" {
-  name                    = "tc-analytics-app"
-  description             = "Config runtime do analytics-service (ToggleMaster)."
-  recovery_window_in_days = 0
+  name                    = "tc-analytics-app-prod"
+  description             = "Config runtime do analytics-service (prod)."
+  recovery_window_in_days = 7
 }
 
 resource "aws_secretsmanager_secret_version" "analytics_app" {
@@ -259,7 +254,7 @@ resource "aws_secretsmanager_secret_version" "analytics_app" {
 }
 
 ########################################################################
-# Add-ons de cluster (Helm)  +  bootstrap do GitOps
+# Add-ons de cluster (Helm) + bootstrap do GitOps
 ########################################################################
 
 module "addons" {
@@ -270,9 +265,8 @@ module "addons" {
   depends_on = [module.eks]
 }
 
-# No DESTROY, roda ANTES de derrubar os add-ons: apaga o Service do
-# ingress-nginx para a AWS liberar o NLB. Sem isso, o Load Balancer +
-# security groups ficam orfaos e travam a exclusao da VPC (DependencyViolation).
+# No DESTROY, apaga o Service do ingress-nginx antes de derrubar os add-ons
+# (libera o NLB e evita DependencyViolation na VPC).
 resource "null_resource" "ingress_lb_cleanup" {
   triggers = {
     cluster = var.cluster_name
@@ -290,55 +284,10 @@ resource "null_resource" "ingress_lb_cleanup" {
   depends_on = [module.addons]
 }
 
-# Credenciais estaticas da sessao para o External Secrets Operator e para os
-# pods de aplicacao que falam direto com a AWS (analytics/evaluation -> SQS,
-# DynamoDB). Sob o Academy nao ha IRSA e o pod nao alcanca o IMDS do node,
-# entao:
-#  - o ClusterSecretStore do ESO aponta para o Secret aws-static-creds
-#    (ns external-secrets, chaves kebab-case exigidas pelo auth.secretRef);
-#  - os deployments em 'toggle' recebem o Secret aws-session-creds via envFrom
-#    (chaves no formato AWS_* que o SDK/boto3 le da cadeia padrao).
-# Recriado a cada apply (o session token expira ~4h; o apply e re-rodado
-# a cada sessao de lab).
-resource "null_resource" "eso_aws_creds" {
-  count = var.enable_external_secrets_creds ? 1 : 0
-
-  triggers = {
-    always = timestamp()
-  }
-
-  provisioner "local-exec" {
-    command = <<-EOT
-      set -e
-      : "$${AWS_ACCESS_KEY_ID:?defina as credenciais da sessao AWS}"
-      : "$${AWS_SECRET_ACCESS_KEY:?}"
-      : "$${AWS_SESSION_TOKEN:?}"
-      aws eks update-kubeconfig --name ${var.cluster_name} --region ${var.region}
-      kubectl create namespace external-secrets --dry-run=client -o yaml | kubectl apply -f -
-      kubectl -n external-secrets create secret generic aws-static-creds \
-        --from-literal=access-key-id="$${AWS_ACCESS_KEY_ID}" \
-        --from-literal=secret-access-key="$${AWS_SECRET_ACCESS_KEY}" \
-        --from-literal=session-token="$${AWS_SESSION_TOKEN}" \
-        --dry-run=client -o yaml | kubectl apply -f -
-      kubectl create namespace toggle --dry-run=client -o yaml | kubectl apply -f -
-      kubectl -n toggle create secret generic aws-session-creds \
-        --from-literal=AWS_ACCESS_KEY_ID="$${AWS_ACCESS_KEY_ID}" \
-        --from-literal=AWS_SECRET_ACCESS_KEY="$${AWS_SECRET_ACCESS_KEY}" \
-        --from-literal=AWS_SESSION_TOKEN="$${AWS_SESSION_TOKEN}" \
-        --dry-run=client -o yaml | kubectl apply -f -
-    EOT
-  }
-
-  depends_on = [module.addons]
-}
-
-# Application "app-of-apps" -- ArgoCD passa a sincronizar fase-3/gitops/
-#
-# Aplicada via local-exec (kubectl), NAO via kubernetes_manifest: aquele
-# recurso exige conexao viva com a API do cluster ja no `plan`, o que quebra
-# o 1o apply de um ambiente vazio e o `tf-plan` do CI. O null_resource so
-# executa no apply, depois que os add-ons (inclusive ArgoCD + CRDs) subiram.
-# Idempotente (kubectl apply); re-roda quando root-app.yaml muda.
+# Application "app-of-apps" -- ArgoCD passa a sincronizar fase-3/gitops/.
+# Em prod o ArgoCD deve seguir a branch 'main' (root-app.yaml usa 'lab' por
+# padrao; sobrescreva o targetRevision antes de ativar prod, ou use um
+# root-app-prod.yaml dedicado).
 resource "null_resource" "root_app" {
   count = var.bootstrap_gitops_root_app ? 1 : 0
 
