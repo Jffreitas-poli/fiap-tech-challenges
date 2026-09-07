@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Ambiente prod (conta pessoal, OIDC). Estrutura pronta; o bind do registry de
+# prod fica pendente da ativacao de envs/prod, que esta explicitamente fora das
+# etapas 3-7 (envs/prod nunca foi aplicado -- ver BASELINE.md).
+#
+# Quando envs/prod entrar, este overlay ganha o transformer de imagem apontando
+# para o ECR da conta pessoal (us-east-1), escrito pelo CI via
+# 'kustomize edit set image' -- mesma mecanica do overlay lab de hoje.
+resources:
+- ../../base
+
+namespace: toggle

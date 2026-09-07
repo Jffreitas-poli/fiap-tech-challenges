@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Base real do auth-service, consolidada da fase-2 (Emenda 001 do ACCEPTANCE).
+# Conteudo identico a
+# fase-2/auth-service/k8s/{configmap,deployment,service}.yaml: a migracao nao
+# pode mudar o render. secrets.yaml da fase-2 continua de fora -- o Secret
+# auth-secret e materializado pelo ESO (ver overlay lab).
+#
+# auth tem imagem de migration DEDICADA (golang-migrate) e o hook PostSync
+# auth-seed-service-key: ambos vivem no overlay lab (migrate-job.yaml,
+# seed-job.yaml), nao na base.
+#
+# NAO declara 'images:' aqui (invariante 5f): o transformer de imagem e unico e
+# vive no overlay de cada ambiente. A chave logica
+# 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/auth-image:1.0 no
+# deployment.yaml e identificador, nao endereco -- cada overlay a reescreve.
+resources:
+- configmap.yaml
+- deployment.yaml
+- service.yaml

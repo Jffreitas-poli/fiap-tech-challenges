@@ -1,17 +1,16 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Reaproveita os manifests da Fase 2 sem duplicar.
-# secrets.yaml da fase-2 e omitido; o Secret <svc>-secret e materializado
-# pelo External Secrets Operator a partir do AWS Secrets Manager
-# (externalsecret.yaml + ClusterSecretStore em manifests/platform).
+# Overlay lab. A base real vive em fase-3/evaluation/k8s/base (consolidada da
+# fase-2, Emenda 001), incluindo o hpa.yaml; aqui ficam so os add-ons do lab:
+# ESO e os patches (configmap sem valores da conta antiga, secretRef de sessao
+# AWS, HPA 1..3). secrets.yaml da fase-2 e omitido; o Secret evaluation-secret
+# e materializado pelo ESO a partir do AWS Secrets Manager (externalsecret.yaml
+# + ClusterSecretStore em manifests/platform).
 # evaluation-service nao tem banco relacional (so Redis) -> sem Job de migration.
 resources:
-- ../../../../fase-2/evaluation-service/k8s/configmap.yaml
-- ../../../../fase-2/evaluation-service/k8s/deployment.yaml
-- ../../../../fase-2/evaluation-service/k8s/service.yaml
+- ../../../evaluation/k8s/base
 - externalsecret.yaml
-- ../../../../fase-2/evaluation-service/k8s/hpa.yaml
 
 namespace: toggle
 
