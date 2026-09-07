@@ -20,10 +20,11 @@ resources:
 
 namespace: toggle
 
-# lab: enquanto o KEDA nao reconcilia, mantem 1 (nao 3).
+# piso de replicas ate o KEDA reconciliar (o ScaledObject e ajustado para
+# minReplicaCount: 2 no patch abaixo).
 replicas:
 - name: analytics-deployment
-  count: 1
+  count: 2
 
   # tira os valores obsoletos do configmap
   # o deployment da fase-2 so tem configMapRef -> adiciona os secretRef.
@@ -55,6 +56,13 @@ patches:
   target:
     kind: Deployment
     name: analytics-deployment
+- patch: |
+    - op: replace
+      path: /spec/minReplicaCount
+      value: 2
+  target:
+    kind: ScaledObject
+    name: analytics-service-scaler
 
 # 'name' casa com a imagem dos manifests da Fase 2 (ECR antigo). O CI atualiza
 # newTag (commit SHA) via 'kustomize edit set image'.
