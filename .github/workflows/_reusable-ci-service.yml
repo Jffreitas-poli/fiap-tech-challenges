@@ -284,17 +284,12 @@ jobs:
           fi
 
       - name: validar registry
-        run: |
-          set -euo pipefail
-          echo "validar-registry: verificando fase-3/gitops/manifests/${{ inputs.service_name }}..."
-          kustomize build "fase-3/gitops/manifests/${{ inputs.service_name }}" \
-            | grep -oE '^\s*(- )?image:\s*\S+' | awk '{print $NF}' | sort -u \
-            | while read -r img; do
-              if [[ "$img" != "${ECR_REGISTRY}"/* ]]; then
-                echo "validar-registry: imagem não autorizada: $img" >&2
-                exit 1
-              fi
-            done || exit 1
+        # Reusa o alvo do Makefile (nao reimplementa): ele carrega a allow-list
+        # fase-3/gitops/.render/allowed-images.txt, que autoriza imagens de
+        # terceiros legitimas do render (postgres:16-alpine nos initContainers
+        # wait-for-db e no auth-seed-service-key). A checagem inline anterior nao
+        # tinha allow-list e reprovava esse postgres.
+        run: make -C fase-3 lint-registry
 
       - name: commit + push (lab)
         run: |
