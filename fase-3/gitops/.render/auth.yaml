@@ -1,0 +1,210 @@
+apiVersion: v1
+data:
+  PORT: "8001"
+kind: ConfigMap
+metadata:
+  name: auth-configmap
+  namespace: toggle
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: toggle
+spec:
+  ports:
+    - port: 8001
+      protocol: TCP
+      targetPort: 8001
+  selector:
+    app: auth
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: auth
+  name: auth-deployment
+  namespace: toggle
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: auth
+    spec:
+      containers:
+        - envFrom:
+            - configMapRef:
+                name: auth-configmap
+            - secretRef:
+                name: auth-secret
+          image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/auth-image:5e35bd5dce31f64b09f460cbdd95a575e9b07876
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          name: auth-container
+          ports:
+            - containerPort: 8001
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+          resources:
+            limits:
+              cpu: 40m
+              memory: 128Mi
+            requests:
+              cpu: 20m
+              memory: 64Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: Replace=true
+    argocd.argoproj.io/sync-wave: "-2"
+  name: auth-migrate
+  namespace: toggle
+spec:
+  activeDeadlineSeconds: 600
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: auth
+        job: migrate
+    spec:
+      containers:
+        - args:
+            - -path=/migrations
+            - -database=$(DATABASE_URL)
+            - up
+          envFrom:
+            - secretRef:
+                name: auth-secret
+          image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/auth-migrate-image:5e35bd5dce31f64b09f460cbdd95a575e9b07876
+          name: migrate
+          resources:
+            limits:
+              cpu: 50m
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 32Mi
+      initContainers:
+        - command:
+            - sh
+            - -c
+            - |
+              until pg_isready -d "$DATABASE_URL"; do
+                echo "aguardando o banco..."; sleep 2;
+              done
+          envFrom:
+            - secretRef:
+                name: auth-secret
+          image: postgres:16-alpine
+          name: wait-for-db
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+  ttlSecondsAfterFinished: 300
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+  name: auth-seed-service-key
+  namespace: toggle
+spec:
+  activeDeadlineSeconds: 300
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: auth
+        job: seed
+    spec:
+      containers:
+        - command:
+            - sh
+            - -c
+            - |
+              set -eu
+              # api_keys.key_hash = SHA-256 hex da chave crua (ver auth key.go)
+              HASH=$(printf '%s' "$SERVICE_API_KEY" | sha256sum | cut -d' ' -f1)
+              psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c \
+                "INSERT INTO api_keys (name, key_hash) VALUES ('evaluation-service', '$HASH') ON CONFLICT (key_hash) DO NOTHING;"
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  key: DATABASE_URL
+                  name: auth-secret
+            - name: SERVICE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: SERVICE_API_KEY
+                  name: evaluation-secret
+          image: postgres:16-alpine
+          name: seed
+          resources:
+            limits:
+              cpu: 50m
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 32Mi
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+  ttlSecondsAfterFinished: 300
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+  name: auth-secret
+  namespace: toggle
+spec:
+  data:
+    - remoteRef:
+        key: tc-rds-auth-credentials
+        property: url
+      secretKey: DATABASE_URL
+    - remoteRef:
+        key: tc-auth-app
+        property: MASTER_KEY
+      secretKey: MASTER_KEY
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: aws-secrets-manager
+  target:
+    creationPolicy: Owner
+    deletionPolicy: Retain
+    name: auth-secret

@@ -1,0 +1,146 @@
+apiVersion: v1
+data:
+  PORT: "8005"
+kind: ConfigMap
+metadata:
+  name: analytics-configmap
+  namespace: toggle
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-service
+  namespace: toggle
+spec:
+  ports:
+    - port: 8005
+      protocol: TCP
+      targetPort: 8005
+  selector:
+    app: analytics
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: analytics
+  name: analytics-deployment
+  namespace: toggle
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: analytics
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: analytics
+    spec:
+      containers:
+        - envFrom:
+            - configMapRef:
+                name: analytics-configmap
+            - secretRef:
+                name: analytics-secret
+            - secretRef:
+                name: aws-session-creds
+          image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/analytics-image:5e35bd5dce31f64b09f460cbdd95a575e9b07876
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8005
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          name: analytics-container
+          ports:
+            - containerPort: 8005
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: 8005
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+          resources:
+            limits:
+              cpu: 40m
+              memory: 128Mi
+            requests:
+              cpu: 20m
+              memory: 64Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+  name: analytics-secret
+  namespace: toggle
+spec:
+  data:
+    - remoteRef:
+        key: tc-analytics-app
+        property: AWS_SQS_URL
+      secretKey: AWS_SQS_URL
+    - remoteRef:
+        key: tc-analytics-app
+        property: AWS_DYNAMODB_TABLE
+      secretKey: AWS_DYNAMODB_TABLE
+    - remoteRef:
+        key: tc-analytics-app
+        property: AWS_REGION
+      secretKey: AWS_REGION
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: aws-secrets-manager
+  target:
+    creationPolicy: Owner
+    name: analytics-secret
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: analytics-service-scaler
+  namespace: toggle
+spec:
+  cooldownPeriod: 300
+  maxReplicaCount: 10
+  minReplicaCount: 1
+  scaleTargetRef:
+    name: analytics-deployment
+  triggers:
+    - authenticationRef:
+        name: keda-aws-credentials
+      metadata:
+        awsRegion: us-east-1
+        queueLength: "5"
+        queueURL: https://sqs.us-east-1.amazonaws.com/361075236043/tc-sqs
+      type: aws-sqs-queue
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: keda-aws-credentials
+  namespace: toggle
+spec:
+  secretTargetRef:
+    - key: AWS_ACCESS_KEY_ID
+      name: aws-session-creds
+      parameter: awsAccessKeyID
+    - key: AWS_SECRET_ACCESS_KEY
+      name: aws-session-creds
+      parameter: awsSecretAccessKey
+    - key: AWS_SESSION_TOKEN
+      name: aws-session-creds
+      parameter: awsSessionToken
