@@ -113,3 +113,67 @@ Documentação pura; fecha o stack.
 1 → 2 → 3 → 4 → 5 → 6, pelo GitHub. A cada merge, o "Update branch" / retarget
 de base do PR seguinte é automático. Antes de mergear o **PR 5**, garanta os
 3 pré-requisitos listados nele.
+
+---
+
+# 2ª rodada — CI de aplicação, DevSecOps e prod-as-code
+
+Fecha as lacunas do checklist do PDF sobre a pipeline de aplicação. Base: `main`.
+
+| # | Branch | Título |
+|---|---|---|
+| 7 | `ci/fase3-reusable-ci-service` | `ci(apps): CI reutilizável por serviço + composite action aws-auth` |
+| 8 | `chore/fase3-lint-hardening` | `chore(devsecops): lint bloqueante (golangci-lint v2, ruff endurecido)` |
+| 9 | `test/fase3-smoke-tests` | `test(apps): testes smoke (go test / pytest) nos 5 serviços` |
+| 10 | `ci/fase3-devsecops-gates` | `ci(devsecops): SAST (gosec/bandit) + SCA (trivy fs) + checkov/trivy IaC bloqueantes` |
+| 11 | `feat/fase3-tf-prod-oidc` | `feat(infra): envs/prod + bootstrap/prod (OIDC, IAM least-privilege) — não aplicado` |
+| 12 | `docs/fase3-devsecops` | `docs(fase-3): README atualizado + DEVSECOPS-DEMO.md` |
+
+### PR 7 — CI reutilizável por serviço
+
+**Arquivos:** `.github/actions/aws-auth/action.yml`,
+`.github/workflows/_reusable-ci-service.yml`,
+`.github/workflows/ci-{auth,flag,targeting,evaluation,analytics}.yml`,
+remove `.github/workflows/apps-ci.yml`.
+Composite action troca lab (chaves de sessão) ↔ prod (OIDC) pelo branch. O job
+`gitops-update` (bump na `lab`) vira o estágio final do reusable.
+
+### PR 8 — lint bloqueante
+
+**Arquivos:** `fase-2/auth-service/.golangci.yml`,
+`fase-2/evaluation-service/.golangci.yml`, `fase-2/.ruff.toml`,
+`fase-2/{flag,targeting,analytics}-service/app.py` + `alembic/**` (aplicação de
+`ruff format`), `fase-2/evaluation-service/*.go` (correções `errcheck`/`io`).
+Remove `continue-on-error` do lint.
+
+### PR 9 — testes smoke
+
+**Arquivos:** `fase-2/auth-service/key_test.go`,
+`fase-2/evaluation-service/evaluator_test.go`,
+`fase-2/{flag,targeting,analytics}-service/test_app.py` + `requirements-dev.txt`.
+`build-and-test` passa a rodar `go test` / `pytest` de verdade.
+
+### PR 10 — gates DevSecOps
+
+**Arquivos:** jobs `security-sast-sca` no reusable (gosec/bandit/trivy fs),
+`fase-3/infra/terraform/.checkov.yaml`, `fase-3/infra/terraform/modules/sqs`
+(SSE), `envs/lab/main.tf` (descrições de SG), `modules/*/variables.tf`
+(`validation {}`), `.github/workflows/infra-tf-{plan,apply}.yml`
+(checkov `soft-fail:false` + `trivy config`).
+
+### PR 11 — prod / OIDC como código
+
+**Arquivos:** `fase-3/infra/bootstrap/prod/**`,
+`fase-3/infra/terraform/envs/prod/{main,variables,outputs,providers}.tf`,
+`envs/prod/{backend,versions}.tf`, `envs/prod/terraform.tfvars.example`,
+`envs/prod/README.md`, `modules/eks/{main,variables}.tf`
+(`cluster_role_arn`/`node_role_arn` opcionais; fallback = `lab_role_arn`).
+**Nada é aplicado na AWS.** `terraform validate` cobre o novo código.
+
+### PR 12 — docs
+
+**Arquivos:** `fase-3/README.md` (resolve os "A confirmar"),
+`fase-3/DEVSECOPS-DEMO.md`, este arquivo.
+
+Branch `demo/devsecops-vuln-block` (dependência com CVE crítico) é criada só
+para gravar o vídeo — **nunca mergeada** (ver `DEVSECOPS-DEMO.md`).

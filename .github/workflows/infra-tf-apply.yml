@@ -27,12 +27,19 @@ env:
 jobs:
   # branch == ambiente: push na lab -> envs/lab, push na main -> envs/prod.
   # workflow_dispatch usa o input escolhido.
+  #
+  # Guard: prod so e aplicado quando o bootstrap/prod ja existe -- sinalizado
+  # por vars.PROD_AWS_ROLE_ARN. Sem isso, o job 'apply' e pulado, entao um
+  # push na main tocando terraform/** nao quebra enquanto prod for so codigo.
   resolve:
     runs-on: ubuntu-latest
     outputs:
       environment: ${{ steps.pick.outputs.environment }}
+      should_apply: ${{ steps.pick.outputs.should_apply }}
     steps:
       - id: pick
+        env:
+          PROD_ROLE_ARN: ${{ vars.PROD_AWS_ROLE_ARN }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             env="${{ inputs.environment }}"
@@ -43,9 +50,26 @@ jobs:
           fi
           echo "environment=$env" >> "$GITHUB_OUTPUT"
 
+          if [ "$env" = "prod" ] && [ -z "$PROD_ROLE_ARN" ]; then
+            echo "should_apply=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### infra-tf-apply — pulado"
+              echo ""
+              echo "Alvo \`prod\`, mas \`vars.PROD_AWS_ROLE_ARN\` está vazio: o"
+              echo "ambiente prod ainda é só código. Rode \`fase-3/infra/bootstrap/prod\`"
+              echo "e configure a variável para habilitar. Nenhum apply executado."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "should_apply=true" >> "$GITHUB_OUTPUT"
+          fi
+
   apply:
     needs: resolve
+    if: needs.resolve.outputs.should_apply == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # OIDC no prod
+      contents: read
     # GitHub Environment: 'prod' com Required reviewers -> aprovacao manual antes do apply na main
     environment: ${{ needs.resolve.outputs.environment }}
     defaults:
@@ -54,13 +78,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials (AWS Academy static keys)
-        uses: aws-actions/configure-aws-credentials@v4
+      # lab -> chaves estaticas de sessao (Academy); prod -> OIDC.
+      - name: auth AWS
+        uses: ./.github/actions/aws-auth
         with:
+          environment: ${{ needs.resolve.outputs.environment }}
+          aws-region: ${{ env.AWS_REGION }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ vars.PROD_AWS_ROLE_ARN }}
 
       - uses: hashicorp/setup-terraform@v3
         with:
@@ -68,6 +95,27 @@ jobs:
 
       # necessario para o null_resource.root_app (kubectl apply do app-of-apps)
       - uses: azure/setup-kubectl@v4
+
+      # ---- gates estaticos antes de tocar a AWS (mesmo do infra-tf-plan) ----
+      - name: terraform fmt
+        working-directory: fase-3/infra/terraform
+        run: terraform fmt -check -recursive
+
+      - name: checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: fase-3/infra/terraform
+          config_file: fase-3/infra/terraform/.checkov.yaml
+
+      - name: trivy config (IaC)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: config
+          scan-ref: fase-3/infra/terraform
+          trivyignores: fase-3/infra/terraform/.trivyignore
+          severity: CRITICAL
+          exit-code: "1"
+          format: table
 
       - name: terraform init
         run: terraform init -input=false

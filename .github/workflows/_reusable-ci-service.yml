@@ -1,0 +1,279 @@
+name: _reusable-ci-service
+
+# CI/DevSecOps de UM microsservico. Chamado por ci-<svc>.yml.
+# Estagios sequenciais (cada job depende do anterior); um CRITICO em qualquer
+# scan de seguranca falha o job e barra os seguintes.
+#
+#   build-and-test  ->  lint  ->  security-sast-sca  ->  docker-build-scan-push  ->  gitops-update
+#
+# Auth AWS: composite action ./.github/actions/aws-auth
+#   - push na branch lab  -> ambiente lab  -> chaves estaticas de sessao (Academy)
+#   - push na branch main -> ambiente prod -> OIDC (role-to-assume)
+
+on:
+  workflow_call:
+    inputs:
+      service_name:
+        required: true
+        type: string
+      service_language:
+        required: true
+        type: string        # go | python
+      working_directory:
+        required: true
+        type: string
+      has_migrate_image:
+        required: false
+        type: boolean
+        default: false
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: 361075236043.dkr.ecr.us-east-1.amazonaws.com
+  ECR_NS: tech-challenge
+  KUSTOMIZE_VERSION: "5.4.3"
+  GO_VERSION: "1.25"
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  # ---------------------------------------------------------------- build + test
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # ---- Go ----
+      - uses: actions/setup-go@v5
+        if: inputs.service_language == 'go'
+        with:
+          go-version-file: ${{ inputs.working_directory }}/go.mod
+      - name: go build + test
+        if: inputs.service_language == 'go'
+        run: |
+          go build ./...
+          go vet ./...
+          go test ./... -race -coverprofile=coverage.out -covermode=atomic
+          go tool cover -func=coverage.out || true
+
+      # ---- Python ----
+      - uses: actions/setup-python@v5
+        if: inputs.service_language == 'python'
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: pip install + pytest
+        if: inputs.service_language == 'python'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+          pytest --cov=. --cov-report=xml --cov-report=term
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ inputs.service_name }}
+          path: |
+            ${{ inputs.working_directory }}/coverage.out
+            ${{ inputs.working_directory }}/coverage.xml
+          if-no-files-found: ignore
+
+  # ---------------------------------------------------------------------- lint
+  lint:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ---- Go: golangci-lint (config em <wd>/.golangci.yml) ----
+      - uses: actions/setup-go@v5
+        if: inputs.service_language == 'go'
+        with:
+          go-version-file: ${{ inputs.working_directory }}/go.mod
+      - name: golangci-lint
+        if: inputs.service_language == 'go'
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.8.0
+          working-directory: ${{ inputs.working_directory }}
+
+      # ---- Python: ruff (config em fase-2/.ruff.toml) ----
+      - name: ruff
+        if: inputs.service_language == 'python'
+        run: |
+          pipx run ruff check --output-format=github "${{ inputs.working_directory }}"
+          pipx run ruff format --check "${{ inputs.working_directory }}"
+
+  # ------------------------------------------------------- SAST + SCA (bloqueia)
+  security-sast-sca:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ---- SCA: Trivy filesystem (dependencias) ----
+      - name: trivy fs (SCA)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: ${{ inputs.working_directory }}
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table
+
+      # ---- SAST Go: gosec ----
+      - uses: actions/setup-go@v5
+        if: inputs.service_language == 'go'
+        with:
+          go-version-file: ${{ inputs.working_directory }}/go.mod
+      - name: gosec (SAST Go)
+        if: inputs.service_language == 'go'
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          # binario pre-compilado (evita 'go install' recompilar gosec com o
+          # toolchain do runner e quebrar em deps antigas).
+          curl -sfL https://raw.githubusercontent.com/securego/gosec/master/install.sh \
+            | sh -s -- -b "$(go env GOPATH)/bin" v2.22.7
+          "$(go env GOPATH)/bin/gosec" -severity high -confidence medium -exclude-dir=vendor ./...
+
+      # ---- SAST Python: bandit ----
+      - uses: actions/setup-python@v5
+        if: inputs.service_language == 'python'
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: bandit (SAST Python)
+        if: inputs.service_language == 'python'
+        run: |
+          pip install bandit==1.7.10
+          bandit -r "${{ inputs.working_directory }}" -ll -ii
+
+  # -------------------------------------------- docker build + scan + push (ECR)
+  docker-build-scan-push:
+    needs: security-sast-sca
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write     # OIDC (prod)
+      contents: read
+    outputs:
+      image_tag: ${{ steps.tag.outputs.tag }}
+    env:
+      # main -> prod, mas SO quando o prod ja existe (vars.PROD_AWS_ROLE_ARN
+      # setado apos rodar bootstrap/prod). Ate la, push na main tambem usa o
+      # ambiente lab (chaves de sessao do Academy) -- igual ao apps-ci antigo.
+      ENVIRONMENT: ${{ (github.ref_name == 'main' && vars.PROD_AWS_ROLE_ARN != '') && 'prod' || 'lab' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: docker build (app)
+        run: docker build --target prod -t "app:ci" "${{ inputs.working_directory }}"
+
+      # container scan ANTES do push
+      - name: trivy image (app)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: "app:ci"
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table
+
+      - name: docker build (migrate)
+        if: inputs.has_migrate_image
+        run: docker build -f "${{ inputs.working_directory }}/Dockerfile.migrate" -t "migrate:ci" "${{ inputs.working_directory }}"
+
+      - name: trivy image (migrate)
+        if: inputs.has_migrate_image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: "migrate:ci"
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table
+
+      - name: tag do commit
+        id: tag
+        run: echo "tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      # ---- push: so fora de PR ----
+      - name: auth AWS
+        if: github.event_name != 'pull_request'
+        uses: ./.github/actions/aws-auth
+        with:
+          environment: ${{ env.ENVIRONMENT }}
+          aws-region: ${{ env.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          role-to-assume: ${{ vars.PROD_AWS_ROLE_ARN }}
+
+      - name: ECR login
+        if: github.event_name != 'pull_request'
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: push (app)
+        if: github.event_name != 'pull_request'
+        run: |
+          IMG="${ECR_REGISTRY}/${ECR_NS}/${{ inputs.service_name }}-image:${{ github.sha }}"
+          docker tag "app:ci" "$IMG"
+          docker push "$IMG"
+
+      - name: push (migrate)
+        if: github.event_name != 'pull_request' && inputs.has_migrate_image
+        run: |
+          IMG="${ECR_REGISTRY}/${ECR_NS}/${{ inputs.service_name }}-migrate-image:${{ github.sha }}"
+          docker tag "migrate:ci" "$IMG"
+          docker push "$IMG"
+
+  # ---------------------------------- GitOps: bump da tag na branch lab (push/lab)
+  gitops-update:
+    needs: docker-build-scan-push
+    if: github.event_name == 'push' && github.ref_name == 'lab'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: gitops-bump-lab
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: lab
+          fetch-depth: 0
+
+      - name: instala kustomize
+        run: |
+          curl -sSLo /tmp/kustomize.tar.gz \
+            "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+          tar -xzf /tmp/kustomize.tar.gz -C /tmp
+          sudo install -m 0755 /tmp/kustomize /usr/local/bin/kustomize
+
+      - name: bump da imagem
+        working-directory: fase-3/gitops/manifests/${{ inputs.service_name }}
+        run: |
+          set -euo pipefail
+          SHA="${{ needs.docker-build-scan-push.outputs.image_tag }}"
+          SVC="${{ inputs.service_name }}"
+          # 'name' no kustomization casa a imagem dos manifests da Fase 2 (ECR
+          # antigo, conta 047719652987 / us-east-2). newName/newTag apontam para
+          # esta conta.
+          OLD_REG="047719652987.dkr.ecr.us-east-2.amazonaws.com/${ECR_NS}"
+          kustomize edit set image \
+            "${OLD_REG}/${SVC}-image=${ECR_REGISTRY}/${ECR_NS}/${SVC}-image:${SHA}"
+          if [ "${{ inputs.has_migrate_image }}" = "true" ]; then
+            MIG="${ECR_REGISTRY}/${ECR_NS}/${SVC}-migrate-image"
+            kustomize edit set image "${MIG}=${MIG}:${SHA}"
+          fi
+
+      - name: commit + push (lab)
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then echo "nada a bumpar"; exit 0; fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add fase-3/gitops/manifests/${{ inputs.service_name }}
+          git commit -m "cd(${{ inputs.service_name }}): bump -> ${GITHUB_SHA:0:7} [skip ci]"
+          git pull --rebase origin lab
+          git push origin HEAD:lab

@@ -1,0 +1,34 @@
+# golangci-lint v2 -- gate bloqueante no CI (_reusable-ci-service.yml -> 'lint').
+# O conjunto "default" (errcheck, govet, ineffassign, staticcheck, unused) ja
+# vem ligado na v2; listamos por clareza.
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+  settings:
+    errcheck:
+      # erros de I/O no codigo legado da fase-2 que nao sao acionaveis:
+      # escrita da resposta HTTP e Close de body em defer.
+      exclude-functions:
+        - encoding/json.Encoder.Encode
+        - (net/http.ResponseWriter).Write
+        - (io.Closer).Close
+        - (*database/sql.Rows).Close
+  exclusions:
+    generated: lax
+    rules:
+      - linters: [errcheck]
+        source: '\.(Encode|Write|Close)\('
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

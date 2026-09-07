@@ -1,11 +1,21 @@
 variable "identifier" {
   description = "Identificador da instancia RDS (ex.: tc-rds-auth)."
   type        = string
+
+  validation {
+    condition     = can(regex("^[a-z][a-z0-9-]{0,62}$", var.identifier))
+    error_message = "identifier deve comecar com letra minuscula, conter apenas [a-z0-9-] e ter no maximo 63 caracteres."
+  }
 }
 
 variable "db_name" {
   description = "Nome do banco inicial (ex.: auth_db)."
   type        = string
+
+  validation {
+    condition     = can(regex("^[a-zA-Z_][a-zA-Z0-9_]*$", var.db_name))
+    error_message = "db_name deve ser um identificador SQL valido (letras, digitos e _; nao comecar com digito)."
+  }
 }
 
 variable "username" {
@@ -30,6 +40,11 @@ variable "instance_class" {
   description = "Classe da instancia."
   type        = string
   default     = "db.t3.micro"
+
+  validation {
+    condition     = can(regex("^db\\.", var.instance_class))
+    error_message = "instance_class deve comecar com 'db.' (ex.: db.t3.micro)."
+  }
 }
 
 variable "allocated_storage" {
