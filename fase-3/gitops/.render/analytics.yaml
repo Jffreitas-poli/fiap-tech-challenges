@@ -50,7 +50,7 @@ spec:
                 name: analytics-secret
             - secretRef:
                 name: aws-session-creds
-          image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/analytics-image:5e35bd5dce31f64b09f460cbdd95a575e9b07876
+          image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/analytics-image:0.0.0-lab.13-6d33632
           livenessProbe:
             httpGet:
               path: /health

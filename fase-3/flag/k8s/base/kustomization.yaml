@@ -4,7 +4,7 @@ kind: Kustomization
 # Base real do flag-service, consolidada da fase-2 (Emenda 001 do ACCEPTANCE).
 # Conteudo identico a fase-2/flag-service/k8s/{configmap,deployment,service}.yaml:
 # a migracao nao pode mudar o render. secrets.yaml da fase-2 continua de fora --
-# o Secret flag-secret e materializado pelo ESO (ver overlay lab).
+# o Secret flags-secret e materializado pelo ESO (ver overlay lab).
 #
 # NAO declara 'images:' aqui (invariante 5f): o transformer de imagem e unico e
 # vive no overlay de cada ambiente. A chave logica
