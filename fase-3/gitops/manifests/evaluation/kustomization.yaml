@@ -62,4 +62,4 @@ patches:
 images:
 - name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/evaluation-image
   newName: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/evaluation-image
-  newTag: 0.0.0-lab.18-9299d51
+  newTag: 0.0.0-lab.21-7dcde38
