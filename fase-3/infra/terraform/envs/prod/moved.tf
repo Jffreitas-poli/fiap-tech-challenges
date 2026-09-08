@@ -37,7 +37,7 @@ moved {
 
 moved {
   from = module.rds["flag"]
-  to   = module.service["flag"].module.rds[0]
+  to   = module.service["flags"].module.rds[0]
 }
 
 moved {
@@ -65,7 +65,7 @@ moved {
 # chaves precisam ser reatribuidas uma a uma ao servico dono.
 #
 # auth tem 2 repositorios porque db.migrate = dedicated (golang-migrate).
-# flag e targeting rodam Alembic a partir da imagem da aplicacao.
+# flags e targeting rodam Alembic a partir da imagem da aplicacao.
 ########################################################################
 
 moved {
@@ -90,12 +90,12 @@ moved {
 
 moved {
   from = module.ecr.aws_ecr_repository.this["tech-challenge/flag-image"]
-  to   = module.service["flag"].module.ecr.aws_ecr_repository.this["tech-challenge/flag-image"]
+  to   = module.service["flags"].module.ecr.aws_ecr_repository.this["tech-challenge/flags-image"]
 }
 
 moved {
   from = module.ecr.aws_ecr_lifecycle_policy.this["tech-challenge/flag-image"]
-  to   = module.service["flag"].module.ecr.aws_ecr_lifecycle_policy.this["tech-challenge/flag-image"]
+  to   = module.service["flags"].module.ecr.aws_ecr_lifecycle_policy.this["tech-challenge/flags-image"]
 }
 
 moved {

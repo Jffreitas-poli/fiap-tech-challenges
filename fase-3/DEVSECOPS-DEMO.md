@@ -13,7 +13,7 @@ git checkout -b demo/devsecops-vuln-block
 ```
 
 Adicione uma dependência com CVE **CRÍTICO e com correção disponível** em
-`fase-2/flag-service/requirements.txt`:
+`fase-2/flags-service/requirements.txt`:
 
 ```diff
   SQLAlchemy==2.0.32
@@ -29,7 +29,7 @@ Abra um PR de `demo/devsecops-vuln-block` para `lab`.
 
 ## O que acontece
 
-O push/PR casa o path `fase-2/flag-service/**` e dispara **`ci-flag.yml`** →
+O push/PR casa o path `fase-2/flags-service/**` e dispara **`ci-flags.yml`** →
 `_reusable-ci-service.yml`:
 
 1. `build-and-test` — passa
@@ -37,7 +37,7 @@ O push/PR casa o path `fase-2/flag-service/**` e dispara **`ci-flag.yml`** →
 3. **`security-sast-sca` — FALHA** no step *"trivy fs (SCA)"*:
 
    ```
-   fase-2/flag-service/requirements.txt (pip)
+   fase-2/flags-service/requirements.txt (pip)
    ==========================================
    Total: 1 (CRITICAL: 1)
 

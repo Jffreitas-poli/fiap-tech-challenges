@@ -1,13 +1,13 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Overlay lab. A base real vive em fase-3/flag/k8s/base (consolidada da fase-2,
+# Overlay lab. A base real vive em fase-3/flags/k8s/base (consolidada da fase-2,
 # Emenda 001); aqui ficam so os add-ons do lab: ESO e Job de migration.
 # secrets.yaml da fase-2 e omitido; o Secret <svc>-secret e materializado
 # pelo External Secrets Operator a partir do AWS Secrets Manager
 # (externalsecret.yaml + ClusterSecretStore em manifests/platform).
 resources:
-- ../../../flag/k8s/base
+- ../../../flags/k8s/base
 - externalsecret.yaml
 - migrate-job.yaml
 
@@ -22,6 +22,6 @@ replicas:
 # entrada reescreve o Deployment e o Job de migration. O CI atualiza newTag
 # (commit SHA) via 'kustomize edit set image'.
 images:
-- name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/flag-image
-  newName: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/flag-image
+- name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/flags-image
+  newName: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/flags-image
   newTag: 0.0.0-lab.28-c376a76

@@ -47,7 +47,7 @@ Este é o serviço de regras de segmentação (targeting) do projeto ToggleMaste
 
 ## 🧪 Testando os Endpoints
 
-Lembre-se de obter sua `SUA_CHAVE_API` no `auth-service` (veja o README do `flag-service`).
+Lembre-se de obter sua `SUA_CHAVE_API` no `auth-service` (veja o README do `flags-service`).
 
 **1. Verifique a Saúde (Health Check):**
 ```bash
@@ -55,7 +55,7 @@ curl http://localhost:8003/health
 ```
 Saída esperada: `{"status":"ok"}`
 
-**2. Crie uma nova Regra de Segmentação:** Vamos criar uma regra para a flag enable-new-dashboard (que você criou no flag-service). Esta regra fará a flag aparecer para 50% dos usuários.
+**2. Crie uma nova Regra de Segmentação:** Vamos criar uma regra para a flag enable-new-dashboard (que você criou no flags-service). Esta regra fará a flag aparecer para 50% dos usuários.
 ```bash
 curl -X POST http://localhost:8003/rules \
 -H "Content-Type: application/json" \

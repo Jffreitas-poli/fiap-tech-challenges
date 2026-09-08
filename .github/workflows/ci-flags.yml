@@ -1,22 +1,22 @@
-name: CI - flag
+name: CI - flags
 
 on:
   workflow_dispatch:
   pull_request:
     paths:
-      - "fase-2/flag-service/**"
-      - ".github/workflows/ci-flag.yml"
+      - "fase-2/flags-service/**"
+      - ".github/workflows/ci-flags.yml"
       - ".github/workflows/_reusable-ci-service.yml"
       - ".github/actions/aws-auth/**"
   push:
     branches: [main, lab]
     paths:
-      - "fase-2/flag-service/**"
-      - ".github/workflows/ci-flag.yml"
+      - "fase-2/flags-service/**"
+      - ".github/workflows/ci-flags.yml"
       - ".github/workflows/_reusable-ci-service.yml"
       - ".github/actions/aws-auth/**"
     tags:
-      - "flag/v*"
+      - "flags/v*"
   release:
     types: [published]
 
@@ -28,8 +28,8 @@ jobs:
   ci:
     uses: ./.github/workflows/_reusable-ci-service.yml
     with:
-      service_name: flag
+      service_name: flags
       service_language: python
-      working_directory: fase-2/flag-service
+      working_directory: fase-2/flags-service
       has_migrate_image: false
     secrets: inherit

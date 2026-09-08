@@ -1,4 +1,4 @@
-"""Smoke test do flag-service.
+"""Smoke test do flags-service.
 
 app.py conecta no Postgres e chama sys.exit(1) se faltar env -> definimos as
 variaveis e trocamos o pool de conexao por um mock antes de importar o modulo.

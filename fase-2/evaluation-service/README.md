@@ -8,7 +8,7 @@ Ele funciona da seguinte forma:
 1.  Recebe uma requisição (`/evaluate?user_id=...&flag_name=...`).
 2.  Busca as regras da flag no **Redis**.
 3.  **Se não estiver no cache (Cache MISS):**
-    * Busca a definição da flag no `flag-service`.
+    * Busca a definição da flag no `flags-service`.
     * Busca a regra no `targeting-service`.
     * Salva o resultado no Redis com um TTL (Time-To-Live) curto.
 4.  Executa a lógica de avaliação (ex: "o usuário está nos 50%?").
@@ -19,7 +19,7 @@ Ele funciona da seguinte forma:
 
 * [Go](https://go.dev/doc/install) (versão 1.21 ou superior)
 * [Redis](https://redis.io/docs/getting-started/installation/) (rodando localmente ou em Docker)
-* Os serviços `auth-service`, `flag-service` e `targeting-service` devem estar rodando.
+* Os serviços `auth-service`, `flags-service` e `targeting-service` devem estar rodando.
 * **Credenciais da AWS:** Para o SQS funcionar, seu terminal deve estar autenticado na AWS (ex: via `aws configure` ou variáveis de ambiente).
 
 ## 🚀 Rodando Localmente
@@ -27,7 +27,7 @@ Ele funciona da seguinte forma:
 1.  **Clone o repositório** e entre na pasta `evaluation-service`.
 
 2.  **Crie uma Chave de API de Serviço:**
-    Este serviço precisa se autenticar no `flag-service` e no `targeting-service`. Você deve criar uma chave de API para ele usando o `auth-service` (com a `MASTER_KEY`).
+    Este serviço precisa se autenticar no `flags-service` e no `targeting-service`. Você deve criar uma chave de API para ele usando o `auth-service` (com a `MASTER_KEY`).
     ```bash
     curl -X POST http://localhost:8001/admin/keys \
     -H "Content-Type: application/json" \
@@ -74,7 +74,7 @@ Ele funciona da seguinte forma:
 ## 🧪 Testando os Endpoints
 
 Para os testes, vamos assumir que você já criou:
-1.  Uma flag chamada `enable-new-dashboard` no `flag-service`.
+1.  Uma flag chamada `enable-new-dashboard` no `flags-service`.
 2.  Uma regra para `enable-new-dashboard` no `targeting-service` do tipo `PERCENTAGE` com valor `50`.
 
 **1. Verifique a Saúde (Health Check):**

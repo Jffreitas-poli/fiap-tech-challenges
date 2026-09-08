@@ -1,4 +1,4 @@
-# flag-service (Python)
+# flags-service (Python)
 
 Este é o serviço de CRUD (Create, Read, Update, Delete) do projeto ToggleMaster. Ele é responsável por gerenciar as *definições* das feature flags.
 
@@ -12,7 +12,7 @@ Este é o serviço de CRUD (Create, Read, Update, Delete) do projeto ToggleMaste
 
 ## 🚀 Rodando Localmente
 
-1.  **Clone o repositório** e entre na pasta `flag-service`.
+1.  **Clone o repositório** e entre na pasta `flags-service`.
 
 2.  **Prepare o Banco de Dados:**
     * Crie um banco de dados no seu PostgreSQL (ex: `flags_db`).
@@ -22,12 +22,12 @@ Este é o serviço de CRUD (Create, Read, Update, Delete) do projeto ToggleMaste
         ```
 
 3.  **Configure as Variáveis de Ambiente:**
-    Crie um arquivo chamado `.env` na raiz desta pasta (`flag-service/`) com o seguinte conteúdo:
+    Crie um arquivo chamado `.env` na raiz desta pasta (`flags-service/`) com o seguinte conteúdo:
     ```.env
     # String de conexão do seu banco de dados PostgreSQL
     DATABASE_URL="postgres://SEU_USUARIO:SUA_SENHA@localhost:5432/flags_db"
 
-    # Porta que este serviço (flag-service) irá rodar
+    # Porta que este serviço (flags-service) irá rodar
     PORT="8002"
 
     # URL do auth-service (que deve estar rodando na porta 8001)
@@ -54,13 +54,13 @@ Este é o serviço de CRUD (Create, Read, Update, Delete) do projeto ToggleMaste
     curl -X POST http://localhost:8001/admin/keys \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer REDACTED" \
-    -d '{"name": "admin-para-flag-service"}'
+    -d '{"name": "admin-para-flags-service"}'
     ```
 2.  Copie a chave retornada (ex: `tm_key_...`). Vamos chamá-la de `SUA_CHAVE_API` no resto dos exemplos.
 
 ---
 
-**Agora, teste o `flag-service`:**
+**Agora, teste o `flags-service`:**
 
 **1. Verifique a Saúde (Health Check):**
 ```bash
