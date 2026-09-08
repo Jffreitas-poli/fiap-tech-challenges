@@ -53,7 +53,7 @@ services:
     language: python
     port: 8002
     path: fase-2/flag-service
-    http:     { enabled: true,  route: /flag }
+    http:     { enabled: true,  route: /flags }
     db:       { enabled: true,  name: flags_db,     seed: false, migrate: app }
     cache:    { enabled: false }
     queue:    { enabled: false }

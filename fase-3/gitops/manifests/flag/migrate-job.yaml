@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: flag-migrate
+  name: flags-migrate
   namespace: toggle
   annotations:
     # resource normal (nao hook): waves ordenam ExternalSecret(-3) -> Job(-2)
@@ -16,7 +16,7 @@ spec:
   template:
     metadata:
       labels:
-        app: flag
+        app: flags
         job: migrate
     spec:
       restartPolicy: Never
@@ -35,7 +35,7 @@ spec:
               done
           envFrom:
             - secretRef:
-                name: flag-secret
+                name: flags-secret
       containers:
         - name: migrate
           # mesma imagem da aplicacao (Alembic + alembic/ ja embarcados);
@@ -45,7 +45,7 @@ spec:
           workingDir: /app
           envFrom:
             - secretRef:
-                name: flag-secret
+                name: flags-secret
           resources:
             requests:
               memory: "64Mi"

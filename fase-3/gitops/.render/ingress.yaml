@@ -19,10 +19,10 @@ spec:
             pathType: ImplementationSpecific
           - backend:
               service:
-                name: flag-service
+                name: flags-service
                 port:
                   number: 8002
-            path: /flag(/|$)(.*)
+            path: /flags(/|$)(.*)
             pathType: ImplementationSpecific
           - backend:
               service:

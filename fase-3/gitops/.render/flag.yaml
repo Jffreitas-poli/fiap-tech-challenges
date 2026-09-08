@@ -4,13 +4,13 @@ data:
   PORT: "8002"
 kind: ConfigMap
 metadata:
-  name: flag-configmap
+  name: flags-configmap
   namespace: toggle
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: flag-service
+  name: flags-service
   namespace: toggle
 spec:
   ports:
@@ -18,21 +18,21 @@ spec:
       protocol: TCP
       targetPort: 8002
   selector:
-    app: flag
+    app: flags
   type: ClusterIP
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: flag
-  name: flag-deployment
+    app: flags
+  name: flags-deployment
   namespace: toggle
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: flag
+      app: flags
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -41,22 +41,23 @@ spec:
   template:
     metadata:
       labels:
-        app: flag
+        app: flags
     spec:
       containers:
         - envFrom:
             - configMapRef:
-                name: flag-configmap
+                name: flags-configmap
             - secretRef:
-                name: flag-secret
+                name: flags-secret
           image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/flag-image:0ec35360d76036cdcaa1d4c5247556be65b29693
           livenessProbe:
             httpGet:
               path: /health
               port: 8002
-            initialDelaySeconds: 20
+            initialDelaySeconds: 40
             periodSeconds: 20
-          name: flag-container
+            timeoutSeconds: 5
+          name: flags-container
           ports:
             - containerPort: 8002
           readinessProbe:
@@ -64,9 +65,10 @@ spec:
             httpGet:
               path: /health
               port: 8002
-            initialDelaySeconds: 10
+            initialDelaySeconds: 20
             periodSeconds: 10
             successThreshold: 1
+            timeoutSeconds: 5
           resources:
             limits:
               cpu: 40m
@@ -84,7 +86,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-options: Replace=true
     argocd.argoproj.io/sync-wave: "-2"
-  name: flag-migrate
+  name: flags-migrate
   namespace: toggle
 spec:
   activeDeadlineSeconds: 600
@@ -92,7 +94,7 @@ spec:
   template:
     metadata:
       labels:
-        app: flag
+        app: flags
         job: migrate
     spec:
       containers:
@@ -102,7 +104,7 @@ spec:
             - head
           envFrom:
             - secretRef:
-                name: flag-secret
+                name: flags-secret
           image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/flag-image:0ec35360d76036cdcaa1d4c5247556be65b29693
           name: migrate
           resources:
@@ -123,7 +125,7 @@ spec:
               done
           envFrom:
             - secretRef:
-                name: flag-secret
+                name: flags-secret
           image: postgres:16-alpine
           name: wait-for-db
       restartPolicy: Never
@@ -137,7 +139,7 @@ kind: ExternalSecret
 metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "-3"
-  name: flag-secret
+  name: flags-secret
   namespace: toggle
 spec:
   data:
@@ -152,4 +154,4 @@ spec:
   target:
     creationPolicy: Owner
     deletionPolicy: Retain
-    name: flag-secret
+    name: flags-secret
