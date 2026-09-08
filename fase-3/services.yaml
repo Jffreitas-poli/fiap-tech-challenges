@@ -29,7 +29,7 @@
 #   cache.enabled   so evaluation (ElastiCache Redis; REDIS_URL vem do ESO)
 #   db.seed         so auth (Job PostSync auth-seed-service-key)
 #   db.migrate      so auth e 'dedicated' (imagem golang-migrate propria);
-#                   flag/targeting sao 'app' (Alembic da imagem da aplicacao).
+#                   flags/targeting sao 'app' (Alembic da imagem da aplicacao).
 #                   E o que o CI le hoje como 'has_migrate_image'.
 #   queue.mode      evaluation e producer, analytics e consumer
 #   queue.keda      so analytics tem ScaledObject por profundidade de fila SQS
@@ -49,10 +49,10 @@ services:
     queue:    { enabled: false }
     dynamodb: { enabled: false }
 
-  - name: flag
+  - name: flags
     language: python
     port: 8002
-    path: fase-2/flag-service
+    path: fase-2/flags-service
     http:     { enabled: true,  route: /flags }
     db:       { enabled: true,  name: flags_db,     seed: false, migrate: app }
     cache:    { enabled: false }

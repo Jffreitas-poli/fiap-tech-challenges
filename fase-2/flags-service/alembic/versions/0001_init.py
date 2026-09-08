@@ -1,4 +1,4 @@
-"""schema inicial do flag-service (portado de db/init.sql)
+"""schema inicial do flags-service (portado de db/init.sql)
 
 Revision ID: 0001_init
 Revises:

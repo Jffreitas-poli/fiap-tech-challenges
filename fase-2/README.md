@@ -42,7 +42,7 @@ O sistema foi decomposto em 5 microsserviços:
 | Serviço | Linguagem | Responsabilidade |
 |---|---|---|
 | `auth-service` | Go | Autenticação e emissão de credenciais |
-| `flag-service` | Python | CRUD e definição de feature flags |
+| `flags-service` | Python | CRUD e definição de feature flags |
 | `targeting-service` | Python | Regras de segmentação/targeting |
 | `evaluation-service` | Go | Avaliação de flags em tempo de execução |
 | `analytics-service` | Python | Coleta e processamento de métricas de uso |
@@ -74,7 +74,7 @@ Componentes principais no cluster:
 
 O propósito de cada escolha:
 
-- **RDS PostgreSQL**: usado pelos serviços com dados relacionais, transacionais e com fortes garantias de consistência — `auth-service`, `flag-service` e `targeting-service`. São dados com relacionamento entre entidades (usuários, flags, regras de segmentação) e que exigem integridade referencial e transações ACID. Seguindo o princípio de *database-per-service*, cada serviço possui sua própria instância RDS, evitando acoplamento pelo banco de dados — um dos pontos negativos identificados no monolito da Fase 1 (Fator IV).
+- **RDS PostgreSQL**: usado pelos serviços com dados relacionais, transacionais e com fortes garantias de consistência — `auth-service`, `flags-service` e `targeting-service`. São dados com relacionamento entre entidades (usuários, flags, regras de segmentação) e que exigem integridade referencial e transações ACID. Seguindo o princípio de *database-per-service*, cada serviço possui sua própria instância RDS, evitando acoplamento pelo banco de dados — um dos pontos negativos identificados no monolito da Fase 1 (Fator IV).
 - **ElastiCache Serverless (Redis)**: usado como camada de cache e para dados de curtíssima duração (ex.: resultado de avaliação de flags, contadores), onde a prioridade é latência baixíssima em vez de durabilidade. Conexão via TLS (`rediss://`), com acesso restrito por Security Group apenas ao cluster EKS.
 - **DynamoDB**: usado pelo `analytics-service` para armazenar eventos de uso e métricas. Esse tipo de dado tem alto volume de escrita, padrão de acesso simples (chave-valor / por partição) e não exige schema rígido nem joins — características em que o DynamoDB escala horizontalmente de forma nativa e sustenta picos de escrita sem o overhead de um banco relacional. Isso também permite que o `analytics-service` escale via KEDA sem gerar contenção em um banco relacional compartilhado.
 

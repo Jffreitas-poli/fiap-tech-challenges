@@ -26,9 +26,9 @@ ACTIONS_DIR     = $(ROOT)/.github/actions
 KUSTOMIZE_FLAGS := --load-restrictor LoadRestrictionsNone
 
 # Overlays sincronizados pelo ArgoCD
-OVERLAYS         := auth flag targeting evaluation analytics platform ingress
+OVERLAYS         := auth flags targeting evaluation analytics platform ingress
 # Overlays que sao servico (platform e ingress nao sao) -- alvo do invariante 5f
-SERVICE_OVERLAYS := auth flag targeting evaluation analytics
+SERVICE_OVERLAYS := auth flags targeting evaluation analytics
 
 # Registry esperado do ambiente (lab)
 REGISTRY := 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge
@@ -253,7 +253,7 @@ lint-structure:
 	\
 	echo "lint-structure: invariante 3a (nenhum .tf com nome de serviço)..."; \
 	if find "$(TF_DIR)" -name '*.tf' 2>/dev/null \
-		| grep -E '/(auth|flag|targeting|evaluation|analytics)[-_.]'; then \
+		| grep -E '/(auth|flags|targeting|evaluation|analytics)[-_.]'; then \
 		echo "lint-structure: 3a falhou" >&2; \
 		exit 1; \
 	fi; \
@@ -351,8 +351,8 @@ selftest:
 	w=$$(setup); : > "$$w/fase-3/gitops/.render/auth.yaml"; \
 	expect_fail "$$w" render-diff "golden vazio (auth.yaml truncado)"; \
 	rm -rf "$$w"; \
-	w=$$(setup); rm -f "$$w/fase-3/gitops/.render/flag.yaml"; \
-	expect_fail "$$w" render-diff "golden de um overlay faltando (flag.yaml)"; \
+	w=$$(setup); rm -f "$$w/fase-3/gitops/.render/flags.yaml"; \
+	expect_fail "$$w" render-diff "golden de um overlay faltando (flags.yaml)"; \
 	rm -rf "$$w"; \
 	w=$$(setup); \
 	sed -i 's#- ../../../../fase-2/auth-service/k8s/service.yaml#&\n- ../../../../fase-2/ingress.yaml#' \
@@ -367,8 +367,8 @@ selftest:
 	expect_fail "$$w" lint-registry "allowed-images.txt vazio"; \
 	rm -rf "$$w"; \
 	w=$$(setup); \
-	sed -i 's#newName: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/flag-image#newName: evil.example.com/tech-challenge/flag-image#' \
-		"$$w/fase-3/gitops/manifests/flag/kustomization.yaml"; \
+	sed -i 's#newName: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/flags-image#newName: evil.example.com/tech-challenge/flags-image#' \
+		"$$w/fase-3/gitops/manifests/flags/kustomization.yaml"; \
 	expect_fail "$$w" lint-registry "imagem de registry nao autorizado (evil.example.com)"; \
 	rm -rf "$$w"; \
 	echo "selftest: PORTAO lint-gitops (5f) + render-diff"; \

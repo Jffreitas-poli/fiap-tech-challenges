@@ -3,7 +3,7 @@ kind: Kustomization
 
 # Ambiente local (Kind/Minikube, up.sh). Sobe a aplicacao a partir da imagem
 # que a base ja declara -- ECR antigo :1.0 -- ou de um build local trocado com
-# 'kustomize edit set image tech-challenge/flag-image=flag:dev'.
+# 'kustomize edit set image tech-challenge/flags-image=flags:dev'.
 # Sem ESO, sem Job de migration, sem ajuste de replicas: isso e do lab.
 resources:
 - ../../base
@@ -11,5 +11,5 @@ resources:
 namespace: toggle
 
 images:
-- name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/flag-image
+- name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/flags-image
   newTag: "1.0"

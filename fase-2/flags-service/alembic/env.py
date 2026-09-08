@@ -1,7 +1,7 @@
-"""Ambiente do Alembic — flag-service.
+"""Ambiente do Alembic — flags-service.
 
 A URL do banco vem de DATABASE_URL (mesma env var usada pela aplicacao,
-injetada via secretRef: flag-secret). Migrations sao SQL puro, entao
+injetada via secretRef: flags-secret). Migrations sao SQL puro, entao
 target_metadata fica None.
 """
 

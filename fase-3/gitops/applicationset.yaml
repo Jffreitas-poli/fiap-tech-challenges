@@ -11,7 +11,7 @@
 #
 #   diretorio em manifests/   ->  metadata.name da Application
 #   auth                          auth-service
-#   flag                          flag-service
+#   flags                         flags-service
 #   targeting                     targeting-service
 #   evaluation                    evaluation-service
 #   analytics                     analytics-service

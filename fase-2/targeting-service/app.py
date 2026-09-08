@@ -36,7 +36,7 @@ except psycopg2.OperationalError as e:
     sys.exit(1)
 
 
-# --- Middleware de Autenticação (Idêntico ao flag-service) ---
+# --- Middleware de Autenticação (Idêntico ao flags-service) ---
 def require_auth(f):
     """Middleware para validar a chave de API contra o auth-service"""
 

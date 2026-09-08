@@ -62,7 +62,7 @@ Toda a infraestrutura que era provisionada manualmente na Fase 2 foi substituíd
 1. **Networking:** VPC, Subnets públicas e privadas, Internet Gateway e Route Tables.
 2. **Cluster EKS:** cluster Kubernetes e Node Groups, associados à `LabRole` do AWS Academy.
 3. **Bancos de Dados:**
-   - 3 instâncias RDS (PostgreSQL) — uma para cada serviço com dados relacionais (`auth-service`, `flag-service`, `targeting-service`), preservando o isolamento de *database-per-service* já adotado na Fase 2.
+   - 3 instâncias RDS (PostgreSQL) — uma para cada serviço com dados relacionais (`auth-service`, `flags-service`, `targeting-service`), preservando o isolamento de *database-per-service* já adotado na Fase 2.
    - 1 Cluster ElastiCache (Redis).
    - 1 tabela DynamoDB (`ToggleMasterAnalytics`), usada pelo `analytics-service`.
 4. **Mensageria:** 1 fila SQS, consumida pelo `analytics-service` e usada como gatilho de escalabilidade do KEDA.
