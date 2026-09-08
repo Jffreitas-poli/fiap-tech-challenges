@@ -52,32 +52,39 @@ spec:
                 name: aws-session-creds
           image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/analytics-image:0.0.0-lab.20-c376a76
           livenessProbe:
-            httpGet:
-              path: /health
-              port: 8005
-            initialDelaySeconds: 20
-            periodSeconds: 20
-          name: analytics-container
-          ports:
-            - containerPort: 8005
-          readinessProbe:
             failureThreshold: 3
             httpGet:
               path: /health
               port: 8005
-            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 5
+          name: analytics-container
+          ports:
+            - containerPort: 8005
+          readinessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /health
+              port: 8005
             periodSeconds: 10
             successThreshold: 1
+            timeoutSeconds: 8
           resources:
             limits:
-              cpu: 40m
-              memory: 128Mi
+              cpu: 500m
+              memory: 192Mi
             requests:
-              cpu: 20m
+              cpu: 50m
               memory: 64Mi
           securityContext:
             runAsNonRoot: true
             runAsUser: 1000
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /health
+              port: 8005
+            periodSeconds: 5
 ---
 apiVersion: external-secrets.io/v1beta1
 kind: ExternalSecret
