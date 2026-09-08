@@ -81,7 +81,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   annotations:
-    argocd.argoproj.io/sync-options: Replace=true
+    argocd.argoproj.io/sync-options: Replace=true,Force=true
     argocd.argoproj.io/sync-wave: "-2"
   name: auth-migrate
   namespace: toggle

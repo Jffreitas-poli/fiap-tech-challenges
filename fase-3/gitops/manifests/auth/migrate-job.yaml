@@ -5,10 +5,13 @@ metadata:
   namespace: toggle
   annotations:
     # resource normal (nao hook): waves ordenam ExternalSecret(-3) -> Job(-2)
-    # -> Deployment(0). Replace=true recria o Job (spec imutavel) quando a
-    # imagem muda.
+    # -> Deployment(0). 'spec.template' do Job e imutavel: 'Replace=true'
+    # sozinho roda 'kubectl replace' e falha nesse campo, deixando o Job
+    # antigo preso na imagem anterior (ImagePullBackOff quando a tag some).
+    # 'Force=true' -> 'kubectl replace --force' (delete + create), entao o
+    # Job e recriado com a imagem nova a cada bump de tag.
     argocd.argoproj.io/sync-wave: "-2"
-    argocd.argoproj.io/sync-options: Replace=true
+    argocd.argoproj.io/sync-options: Replace=true,Force=true
 spec:
   backoffLimit: 3
   activeDeadlineSeconds: 600
