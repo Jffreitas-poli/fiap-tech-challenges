@@ -51,34 +51,39 @@ spec:
                 name: flags-secret
           image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/flags-image:0.0.0-lab.2-1326719
           livenessProbe:
+            failureThreshold: 3
             httpGet:
               path: /health
               port: 8002
-            initialDelaySeconds: 40
             periodSeconds: 20
             timeoutSeconds: 5
           name: flags-container
           ports:
             - containerPort: 8002
           readinessProbe:
-            failureThreshold: 3
+            failureThreshold: 6
             httpGet:
               path: /health
               port: 8002
-            initialDelaySeconds: 20
             periodSeconds: 10
             successThreshold: 1
-            timeoutSeconds: 5
+            timeoutSeconds: 8
           resources:
             limits:
-              cpu: 40m
-              memory: 128Mi
+              cpu: 500m
+              memory: 192Mi
             requests:
-              cpu: 20m
+              cpu: 50m
               memory: 64Mi
           securityContext:
             runAsNonRoot: true
             runAsUser: 1000
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /health
+              port: 8002
+            periodSeconds: 5
 ---
 apiVersion: batch/v1
 kind: Job
