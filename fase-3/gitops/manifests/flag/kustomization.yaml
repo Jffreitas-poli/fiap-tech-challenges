@@ -15,8 +15,8 @@ namespace: toggle
 
 # 1 replica por servico (lab: teto de pods baixo)
 replicas:
-- count: 1
-  name: flag-deployment
+- name: flags-deployment
+  count: 1
 
 # 'name' casa com a imagem dos manifests da Fase 2 (ECR antigo). A mesma
 # entrada reescreve o Deployment e o Job de migration. O CI atualiza newTag

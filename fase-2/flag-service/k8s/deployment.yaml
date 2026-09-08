@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: flag-deployment
+  name: flags-deployment
   namespace: toggle
   labels:
-    app: flag
+    app: flags
 spec:
   replicas: 3
   strategy:
@@ -14,14 +14,14 @@ spec:
       maxUnavailable: 0
   selector:
     matchLabels:
-      app: flag
+      app: flags
   template:
     metadata:
       labels:
-        app: flag
+        app: flags
     spec:
       containers:
-      - name: flag-container
+      - name: flags-container
         image: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/flag-image:1.0
         securityContext:
           runAsNonRoot: true
@@ -37,9 +37,9 @@ spec:
         - containerPort: 8002
         envFrom:
         - configMapRef:
-            name: flag-configmap
+            name: flags-configmap
         - secretRef:
-            name: flag-secret
+            name: flags-secret
         livenessProbe:
           httpGet:
             path: /health
