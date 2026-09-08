@@ -18,8 +18,8 @@ namespace: toggle
 
 # 1 replica por servico (lab: teto de pods baixo)
 replicas:
-- name: auth-deployment
-  count: 1
+- count: 1
+  name: auth-deployment
 
 # 'name' casa com a imagem escrita nos manifests da Fase 2 (ECR antigo);
 # newName/newTag apontam para o ECR desta conta. O CI atualiza newTag com
@@ -27,7 +27,7 @@ replicas:
 images:
 - name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/auth-image
   newName: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/auth-image
-  newTag: 5e35bd5dce31f64b09f460cbdd95a575e9b07876
+  newTag: 0.0.0-lab.15-be42859
 - name: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/auth-migrate-image
   newName: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/auth-migrate-image
-  newTag: 5e35bd5dce31f64b09f460cbdd95a575e9b07876
+  newTag: 0.0.0-lab.15-be42859
