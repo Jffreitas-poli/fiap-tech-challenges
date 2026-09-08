@@ -48,7 +48,7 @@ spec:
                 name: auth-configmap
             - secretRef:
                 name: auth-secret
-          image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/auth-image:0.0.0-lab.18-7dcde38
+          image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/auth-image:0.0.0-lab.20-c376a76
           livenessProbe:
             httpGet:
               path: /health
@@ -102,7 +102,7 @@ spec:
           envFrom:
             - secretRef:
                 name: auth-secret
-          image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/auth-migrate-image:0.0.0-lab.18-7dcde38
+          image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/auth-migrate-image:0.0.0-lab.20-c376a76
           name: migrate
           resources:
             limits:
