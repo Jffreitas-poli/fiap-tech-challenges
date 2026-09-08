@@ -32,6 +32,7 @@ env:
   ECR_REGISTRY: 361075236043.dkr.ecr.us-east-1.amazonaws.com
   ECR_NS: tech-challenge
   KUSTOMIZE_VERSION: "5.4.3"
+  YQ_VERSION: "4.44.3"
   GO_VERSION: "1.25"
   PYTHON_VERSION: "3.12"
 
@@ -259,12 +260,16 @@ jobs:
           ref: lab
           fetch-depth: 0
 
-      - name: instala kustomize
+      - name: instala kustomize + yq
         run: |
           curl -sSLo /tmp/kustomize.tar.gz \
             "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
           tar -xzf /tmp/kustomize.tar.gz -C /tmp
           sudo install -m 0755 /tmp/kustomize /usr/local/bin/kustomize
+          # yq: normalizacao dos goldens no 'make render-baseline' (yq -P '.')
+          sudo curl -sSL -o /usr/local/bin/yq \
+            "https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64"
+          sudo chmod +x /usr/local/bin/yq
 
       - name: bump da imagem
         working-directory: fase-3/gitops/manifests/${{ inputs.service_name }}
@@ -283,6 +288,12 @@ jobs:
             kustomize edit set image "${MIG}=${MIG}:${TAG}"
           fi
 
+      - name: regenera .render (golden)
+        # O bump muda o kustomization.yaml; sem regenerar fase-3/gitops/.render/
+        # o `make render-diff` fica vermelho na lab ate alguem rodar
+        # render-baseline a mao. Reusa o alvo do Makefile (nao reimplementa).
+        run: make -C fase-3 render-baseline
+
       - name: validar registry
         # Reusa o alvo do Makefile (nao reimplementa): ele carrega a allow-list
         # fase-3/gitops/.render/allowed-images.txt, que autoriza imagens de
@@ -297,7 +308,7 @@ jobs:
           if git diff --quiet; then echo "nada a bumpar"; exit 0; fi
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add fase-3/gitops/manifests/${{ inputs.service_name }}
+          git add fase-3/gitops/manifests/${{ inputs.service_name }} fase-3/gitops/.render
           git commit -m "cd(${{ inputs.service_name }}): bump -> ${GITHUB_SHA:0:7} [skip ci]"
           git pull --rebase origin lab
           git push origin HEAD:lab

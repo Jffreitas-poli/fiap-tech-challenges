@@ -48,7 +48,7 @@ spec:
                 name: auth-configmap
             - secretRef:
                 name: auth-secret
-          image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/auth-image:5e35bd5dce31f64b09f460cbdd95a575e9b07876
+          image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/auth-image:0.0.0-lab.18-7dcde38
           livenessProbe:
             httpGet:
               path: /health
@@ -81,7 +81,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   annotations:
-    argocd.argoproj.io/sync-options: Replace=true
+    argocd.argoproj.io/sync-options: Replace=true,Force=true
     argocd.argoproj.io/sync-wave: "-2"
   name: auth-migrate
   namespace: toggle
@@ -102,7 +102,7 @@ spec:
           envFrom:
             - secretRef:
                 name: auth-secret
-          image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/auth-migrate-image:5e35bd5dce31f64b09f460cbdd95a575e9b07876
+          image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/auth-migrate-image:0.0.0-lab.18-7dcde38
           name: migrate
           resources:
             limits:

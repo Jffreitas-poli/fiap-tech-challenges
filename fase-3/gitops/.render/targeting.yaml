@@ -49,7 +49,7 @@ spec:
                 name: targeting-configmap
             - secretRef:
                 name: targeting-secret
-          image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/targeting-image:0ec35360d76036cdcaa1d4c5247556be65b29693
+          image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/targeting-image:0.0.0-lab.23-7dcde38
           livenessProbe:
             httpGet:
               path: /health
@@ -82,7 +82,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   annotations:
-    argocd.argoproj.io/sync-options: Replace=true
+    argocd.argoproj.io/sync-options: Replace=true,Force=true
     argocd.argoproj.io/sync-wave: "-2"
   name: targeting-migrate
   namespace: toggle
@@ -103,7 +103,7 @@ spec:
           envFrom:
             - secretRef:
                 name: targeting-secret
-          image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/targeting-image:0ec35360d76036cdcaa1d4c5247556be65b29693
+          image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/targeting-image:0.0.0-lab.23-7dcde38
           name: migrate
           resources:
             limits:
