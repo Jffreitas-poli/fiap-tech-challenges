@@ -46,4 +46,6 @@ terraform.rc
 
 # Terraform dependency lock: versionar apenas nos root modules (bootstrap, envs/*),
 # nunca nos modulos reutilizaveis (gerado pelos hooks terraform_validate/tflint)
-fase-3/infra/terraform/modules/**/.terraform.lock.hcl
+/fase-3/infra/terraform/modules/**/.terraform.lock.hcl
+/fase-3/infra/terraform/envs/lab/.terraform.lock.hcl
+/fase-3/infra/terraform/envs/prod/.terraform.lock.hcl
