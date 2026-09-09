@@ -6,18 +6,9 @@ spec:
   provider:
     aws:
       auth:
-        secretRef:
-          accessKeyIDSecretRef:
-            key: access-key-id
-            name: aws-static-creds
-            namespace: external-secrets
-          secretAccessKeySecretRef:
-            key: secret-access-key
-            name: aws-static-creds
-            namespace: external-secrets
-          sessionTokenSecretRef:
-            key: session-token
-            name: aws-static-creds
+        jwt:
+          serviceAccountRef:
+            name: external-secrets
             namespace: external-secrets
       region: us-east-1
       service: SecretsManager
