@@ -24,4 +24,4 @@ replicas:
 images:
 - name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/flags-image
   newName: 047719652987.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/flags-image
-  newTag: 0.0.0-lab.5-8956f82
+  newTag: 0.0.0-lab.7-789e214
