@@ -49,7 +49,7 @@ spec:
                 name: targeting-configmap
             - secretRef:
                 name: targeting-secret
-          image: 047719652987.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/targeting-image:0.0.0-lab.27-1326719
+          image: 047719652987.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/targeting-image:0.0.0-lab.4-8956f82
           livenessProbe:
             failureThreshold: 3
             httpGet:
@@ -110,7 +110,7 @@ spec:
           envFrom:
             - secretRef:
                 name: targeting-secret
-          image: 047719652987.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/targeting-image:0.0.0-lab.27-1326719
+          image: 047719652987.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/targeting-image:0.0.0-lab.4-8956f82
           name: migrate
           resources:
             limits:
