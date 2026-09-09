@@ -82,13 +82,23 @@ resource "helm_release" "external_secrets" {
   version          = var.external_secrets_chart_version
   namespace        = "external-secrets"
   create_namespace = true
+  
   timeout          = 600
   cleanup_on_fail  = true
 
-  set {
-    name  = "installCRDs"
-    value = "true"
-  }
+  values = [
+    yamlencode({
+      installCRDs = true
+      
+      serviceAccount = {
+        create = true
+        name   = "external-secrets"
+        annotations = {
+          "eks.amazonaws.com/role-arn" = "arn:aws:iam::047719652987:role/tc-cluster-secrets-prod-irsa"
+        }
+      }
+    })
+  ]
 }
 
 resource "helm_release" "argocd" {
