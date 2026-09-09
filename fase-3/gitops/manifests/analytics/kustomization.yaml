@@ -11,7 +11,7 @@ kind: Kustomization
 # fila/regiao do lab).
 # analytics-service usa SQS + DynamoDB (schemaless) -> sem Job de migration.
 resources:
-- ../../../analytics/k8s/base
+- ../../../analytics/k8s/overlays/prod
 
 namespace: toggle
 

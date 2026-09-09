@@ -9,7 +9,7 @@ kind: Kustomization
 # ESO a partir do AWS Secrets Manager (externalsecret.yaml + ClusterSecretStore
 # em manifests/platform).
 resources:
-- ../../../auth/k8s/base
+- ../../../auth/k8s/overlays/prod
 - migrate-job.yaml
 - seed-job.yaml
 

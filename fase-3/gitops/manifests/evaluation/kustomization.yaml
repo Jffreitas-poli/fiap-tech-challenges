@@ -9,7 +9,7 @@ kind: Kustomization
 # + ClusterSecretStore em manifests/platform).
 # evaluation-service nao tem banco relacional (so Redis) -> sem Job de migration.
 resources:
-- ../../../evaluation/k8s/base
+- ../../../evaluation/k8s/overlays/prod
 
 namespace: toggle
 
