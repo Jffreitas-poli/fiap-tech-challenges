@@ -12,3 +12,18 @@ resources:
 - ../../base
 
 namespace: toggle
+
+patches:
+  - target:
+      kind: ExternalSecret
+      name: analytics-secret
+    patch: |-
+      - op: replace
+        path: /spec/data/0/remoteRef/key
+        value: tc-analytics-app-prod
+      - op: replace
+        path: /spec/data/1/remoteRef/key
+        value: tc-analytics-app-prod
+      - op: replace
+        path: /spec/data/2/remoteRef/key
+        value: tc-analytics-app-prod

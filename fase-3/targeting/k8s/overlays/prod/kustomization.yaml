@@ -12,3 +12,12 @@ resources:
 - ../../base
 
 namespace: toggle
+
+patches:
+  - target:
+      kind: ExternalSecret
+      name: targeting-secret
+    patch: |-
+      - op: replace
+        path: /spec/data/0/remoteRef/key
+        value: tc-rds-targeting-prod-credentials

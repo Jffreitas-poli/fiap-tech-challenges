@@ -10,7 +10,6 @@ kind: Kustomization
 # evaluation-service nao tem banco relacional (so Redis) -> sem Job de migration.
 resources:
 - ../../../evaluation/k8s/base
-- externalsecret.yaml
 
 namespace: toggle
 

@@ -12,3 +12,21 @@ resources:
 - ../../base
 
 namespace: toggle
+
+patches:
+  - target:
+      kind: ExternalSecret
+      name: evaluation-secret
+    patch: |-
+      - op: replace
+        path: /spec/data/0/remoteRef/key
+        value: tc-evaluation-app-prod
+      - op: replace
+        path: /spec/data/1/remoteRef/key
+        value: tc-evaluation-app-prod
+      - op: replace
+        path: /spec/data/2/remoteRef/key
+        value: tc-evaluation-app-prod
+      - op: replace
+        path: /spec/data/3/remoteRef/key
+        value: tc-evaluation-app-prod

@@ -8,7 +8,6 @@ kind: Kustomization
 # (externalsecret.yaml + ClusterSecretStore em manifests/platform).
 resources:
 - ../../../flags/k8s/base
-- externalsecret.yaml
 - migrate-job.yaml
 
 namespace: toggle
