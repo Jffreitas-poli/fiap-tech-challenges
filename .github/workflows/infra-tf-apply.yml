@@ -48,7 +48,7 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             env="${{ inputs.environment }}"
-          elif [ ("${{ github.ref_name }}" = "main") ] || [ "${{ github.ref_name }}" = "lab-jeff" ]; then
+          elif [ "${{ github.ref_name }}" = "main" ] || [ "${{ github.ref_name }}" = "lab-jeff" ]; then
             env="prod"
           else
             env="lab"
