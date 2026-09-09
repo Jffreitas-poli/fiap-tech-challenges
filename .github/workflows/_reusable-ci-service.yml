@@ -1,6 +1,6 @@
 name: _reusable-ci-service
 
-# CI/DevSecOps de UM microsservico. Chamado por ci-<svc>.yml.
+# CI/DevSecOps de UM microsservico. Chamado por ci-<svc>.yml. 
 # Estagios sequenciais (cada job depende do anterior); um CRITICO em qualquer
 # scan de seguranca falha o job e barra os seguintes.
 #
@@ -29,7 +29,7 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  ECR_REGISTRY: 361075236043.dkr.ecr.us-east-1.amazonaws.com
+  ECR_REGISTRY: 047719652987.dkr.ecr.us-east-1.amazonaws.com
   ECR_NS: tech-challenge
   KUSTOMIZE_VERSION: "5.4.3"
   YQ_VERSION: "4.44.3"
@@ -163,7 +163,7 @@ jobs:
       # main -> prod, mas SO quando o prod ja existe (vars.PROD_AWS_ROLE_ARN
       # setado apos rodar bootstrap/prod). Ate la, push na main tambem usa o
       # ambiente lab (chaves de sessao do Academy) -- igual ao apps-ci antigo.
-      ENVIRONMENT: ${{ (github.ref_name == 'main' && vars.PROD_AWS_ROLE_ARN != '') && 'prod' || 'lab' }}
+      ENVIRONMENT: ${{ (github.ref_name == 'lab-jeff' && vars.PROD_AWS_ROLE_ARN != '') && 'prod' || 'lab' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -213,7 +213,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: ./.github/actions/aws-auth
         with:
-          environment: ${{ env.ENVIRONMENT }}
+          environment: ${{ (github.ref_name == 'lab-jeff' && vars.PROD_AWS_ROLE_ARN != '') && 'prod' || 'lab' }}
           aws-region: ${{ env.AWS_REGION }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -247,7 +247,7 @@ jobs:
   # ---------------------------------- GitOps: bump da tag na branch lab (push/lab)
   gitops-update:
     needs: docker-build-scan-push
-    if: github.event_name == 'push' && github.ref_name == 'lab'
+    if: github.event_name == 'push' && github.ref_name == 'lab-jeff'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -257,7 +257,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: lab
+          ref: lab-jeff
           fetch-depth: 0
 
       - name: instala kustomize + yq
@@ -302,7 +302,7 @@ jobs:
         # tinha allow-list e reprovava esse postgres.
         run: make -C fase-3 lint-registry
 
-      - name: commit + push (lab)
+      - name: commit + push (lab-jeff)
         run: |
           set -euo pipefail
           if git diff --quiet; then echo "nada a bumpar"; exit 0; fi
@@ -310,5 +310,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add fase-3/gitops/manifests/${{ inputs.service_name }} fase-3/gitops/.render
           git commit -m "cd(${{ inputs.service_name }}): bump -> ${GITHUB_SHA:0:7} [skip ci]"
-          git pull --rebase origin lab
-          git push origin HEAD:lab
+          git pull --rebase origin lab-jeff
+          git push origin HEAD:lab-jeff

@@ -17,11 +17,14 @@ concurrency:
 env:
   AWS_REGION: us-east-1
   TF_VERSION: "1.9.8"
-  TF_ROOT: fase-3/infra/terraform/envs/lab
+  TF_ROOT: fase-3/infra/terraform/envs/prod
 
 jobs:
   plan:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # OIDC no prod
+      contents: read
     defaults:
       run:
         working-directory: ${{ env.TF_ROOT }}
@@ -31,10 +34,8 @@ jobs:
       - name: Configure AWS credentials (AWS Academy static keys)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ vars.PROD_AWS_ROLE_ARN }}
 
       - uses: hashicorp/setup-terraform@v3
         with:
@@ -87,51 +88,3 @@ jobs:
             echo 'TFPLAN_EOF'
           } >> "$GITHUB_OUTPUT"
 
-      # Estimativa de custo mensal a partir do MESMO tfplan. Preco de tabela
-      # (on-demand, sem desconto/trafego real) via API do Infracost -- nao
-      # recebe credencial AWS, so tipo+parametros do recurso. Secret gratuito
-      # INFRACOST_API_KEY (infracost.io). Nao bloqueia o job.
-      - name: setup infracost
-        uses: infracost/actions/setup@v3
-        with:
-          api-key: ${{ secrets.INFRACOST_API_KEY }}
-
-      - name: infracost breakdown
-        run: |
-          set -o pipefail
-          terraform show -json tfplan > plan.json
-          infracost breakdown --path plan.json \
-            --format json --out-file /tmp/infracost.json
-          infracost output --path /tmp/infracost.json --format table | tee /tmp/infracost.txt
-          {
-            echo '## Estimativa de custo mensal — fase-3/lab (Infracost)'
-            echo ''
-            echo '```'
-            cat /tmp/infracost.txt
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: infracost comment on PR
-        run: |
-          infracost comment github --path /tmp/infracost.json \
-            --repo "$GITHUB_REPOSITORY" \
-            --pull-request "${{ github.event.pull_request.number }}" \
-            --github-token "${{ secrets.GITHUB_TOKEN }}" \
-            --behavior update
-
-      - name: comment plan on PR
-        uses: actions/github-script@v7
-        env:
-          PLAN: ${{ steps.plan.outputs.stdout }}
-        with:
-          script: |
-            const marker = '<!-- infra-tf-plan:fase-3/lab -->';
-            const body = `${marker}\n#### \`terraform plan\` — \`fase-3/lab\`\n\n<details><summary>ver plan</summary>\n\n\`\`\`\n${process.env.PLAN}\n\`\`\`\n\n</details>`;
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number });
-            const mine = comments.find(c => c.body && c.body.includes(marker));
-            if (mine) {
-              await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: mine.id, body });
-            } else {
-              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
-            }

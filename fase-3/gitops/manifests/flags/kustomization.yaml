@@ -23,5 +23,5 @@ replicas:
 # (commit SHA) via 'kustomize edit set image'.
 images:
 - name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/flags-image
-  newName: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/flags-image
+  newName: 047719652987.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/flags-image
   newTag: 0.0.0-lab.2-1326719

@@ -19,7 +19,7 @@ variable "lock_table_name" {
 variable "github_org" {
   description = "Org/owner do repositorio."
   type        = string
-  default     = "NyEstevo"
+  default     = "Jffreitas-poli"
 }
 
 variable "github_repo" {

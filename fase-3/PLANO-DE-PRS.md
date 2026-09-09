@@ -7,7 +7,7 @@ seus próprios arquivos (paths disjuntos, sem conflito) e deve ser mergeado na
 ordem **1 → 6**. Ao mergear o PR N, o GitHub re-aponta a base do PR N+1 para a
 `main` automaticamente.
 
-**Repositório:** `github.com/NyEstevo/fiap-tech-challenges` · **Base:** `main`
+**Repositório:** `github.com/Jffreitas-poli/fiap-tech-challenges` · **Base:** `main`
 · **Títulos:** Conventional Commits.
 
 Nenhum merge aplica nada na AWS — o primeiro `terraform apply` é manual, ver
@@ -30,7 +30,7 @@ Nenhum merge aplica nada na AWS — o primeiro `terraform apply` é manual, ver
 `fase-3/infra/bootstrap/**`
 
 Cria (quando aplicado à parte, fora do CI) o bucket
-`s3://tc-fiap-tfstate-361075236043` e a tabela de lock `tc-fiap-tflock`, ambos
+`s3://tc-fiap-tfstate-047719652987` e a tabela de lock `tc-fiap-tflock`, ambos
 com `prevent_destroy`. State local (é o que cria o backend).
 
 **Validação:** `cd fase-3/infra/bootstrap && terraform fmt -check && terraform init -backend=false && terraform validate`

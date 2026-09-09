@@ -101,7 +101,7 @@ importa (serviços RDS, repos ECR); `locals` para transformações; blocos
 ## Backend Remoto do Terraform State
 
 O `terraform.tfstate` não é mantido localmente. O backend remoto é um **Bucket
-S3** (`tc-fiap-tfstate-361075236043`, versionado e com encryption), com
+S3** (`tc-fiap-tfstate-047719652987`, versionado e com encryption), com
 **state locking via tabela DynamoDB** (`tc-fiap-tflock`) — `use_lockfile` (lock
 nativo no S3) exige Terraform ≥ 1.10 e o projeto fixa `1.9.8`; a migração para
 `use_lockfile` está documentada como passo futuro. O lock evita aplicações

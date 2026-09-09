@@ -30,7 +30,7 @@ terraform/
 ```bash
 cd fase-3/infra/bootstrap
 terraform init
-terraform apply            # cria s3://tc-fiap-tfstate-361075236043 e a tabela tc-fiap-tflock
+terraform apply            # cria s3://tc-fiap-tfstate-047719652987 e a tabela tc-fiap-tflock
 ```
 
 Alternativa em AWS CLI: ver a seção "Bootstrap" no plano

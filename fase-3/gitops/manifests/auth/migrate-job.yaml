@@ -44,7 +44,7 @@ spec:
         - name: migrate
           # ECR tech-challenge/auth-migrate-image :: golang-migrate + migrations/
           # a tag (commit SHA) e setada pelo CI via 'kustomize edit set image'
-          image: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/auth-migrate-image
+          image: 047719652987.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/auth-migrate-image
           args:
             - "-path=/migrations"
             - "-database=$(DATABASE_URL)"
