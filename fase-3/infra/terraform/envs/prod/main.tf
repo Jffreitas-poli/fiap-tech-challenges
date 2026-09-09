@@ -22,7 +22,7 @@ locals {
     Phase       = "fase-3"
     Environment = local.env
     ManagedBy   = "terraform"
-    Repo        = "NyEstevo/fiap-tech-challenges"
+    Repo        = "Jffreitas-poli/fiap-tech-challenges"
     Account     = var.account_id
   }
 
