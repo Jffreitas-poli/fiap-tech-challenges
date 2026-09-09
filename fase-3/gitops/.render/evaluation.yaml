@@ -118,19 +118,19 @@ metadata:
 spec:
   data:
     - remoteRef:
-        key: tc-evaluation-app
+        key: tc-evaluation-app-prod
         property: SERVICE_API_KEY
       secretKey: SERVICE_API_KEY
     - remoteRef:
-        key: tc-evaluation-app
+        key: tc-evaluation-app-prod
         property: REDIS_URL
       secretKey: REDIS_URL
     - remoteRef:
-        key: tc-evaluation-app
+        key: tc-evaluation-app-prod
         property: AWS_SQS_URL
       secretKey: AWS_SQS_URL
     - remoteRef:
-        key: tc-evaluation-app
+        key: tc-evaluation-app-prod
         property: AWS_REGION
       secretKey: AWS_REGION
   refreshInterval: 1h

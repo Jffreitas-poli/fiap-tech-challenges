@@ -149,7 +149,7 @@ metadata:
 spec:
   data:
     - remoteRef:
-        key: tc-rds-flags-credentials
+        key: tc-rds-flags-prod-credentials
         property: url
       secretKey: DATABASE_URL
   refreshInterval: 1h

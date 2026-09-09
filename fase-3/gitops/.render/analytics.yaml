@@ -96,15 +96,15 @@ metadata:
 spec:
   data:
     - remoteRef:
-        key: tc-analytics-app
+        key: tc-analytics-app-prod
         property: AWS_SQS_URL
       secretKey: AWS_SQS_URL
     - remoteRef:
-        key: tc-analytics-app
+        key: tc-analytics-app-prod
         property: AWS_DYNAMODB_TABLE
       secretKey: AWS_DYNAMODB_TABLE
     - remoteRef:
-        key: tc-analytics-app
+        key: tc-analytics-app-prod
         property: AWS_REGION
       secretKey: AWS_REGION
   refreshInterval: 1h

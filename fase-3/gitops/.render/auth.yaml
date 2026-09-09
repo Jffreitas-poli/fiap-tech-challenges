@@ -200,11 +200,11 @@ metadata:
 spec:
   data:
     - remoteRef:
-        key: tc-rds-auth-credentials
+        key: tc-rds-auth-prod-credentials
         property: url
       secretKey: DATABASE_URL
     - remoteRef:
-        key: tc-auth-app
+        key: tc-auth-app-prod
         property: MASTER_KEY
       secretKey: MASTER_KEY
   refreshInterval: 1h
