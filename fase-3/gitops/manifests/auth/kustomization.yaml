@@ -10,7 +10,6 @@ kind: Kustomization
 # em manifests/platform).
 resources:
 - ../../../auth/k8s/base
-- externalsecret.yaml
 - migrate-job.yaml
 - seed-job.yaml
 

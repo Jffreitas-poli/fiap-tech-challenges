@@ -12,3 +12,15 @@ resources:
 - ../../base
 
 namespace: toggle
+
+patches:
+  - target:
+      kind: ExternalSecret
+      name: auth-secret
+    patch: |-
+      - op: replace
+        path: /spec/data/0/remoteRef/key
+        value: tc-rds-auth-prod-credentials
+      - op: replace
+        path: /spec/data/1/remoteRef/key
+        value: tc-auth-app-prod
