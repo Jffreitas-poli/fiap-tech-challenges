@@ -14,7 +14,7 @@ workflows autenticam com as chaves estaticas da sessao (`AWS_ACCESS_KEY_ID`,
 ```hcl
 module "gha_oidc" {
   source           = "../../modules/iam_oidc_github"
-  github_org       = "NyEstevo"
+  github_org       = "Jffreitas-poli"
   github_repo      = "fiap-tech-challenges"
   allowed_branches = ["main"]
   role_name        = "gha-toggle-master-infra"
