@@ -9,7 +9,7 @@ on:
       - ".github/workflows/_reusable-ci-service.yml"
       - ".github/actions/aws-auth/**"
   push:
-    branches: [main, lab]
+    branches: [main, lab, lab-jeff]
     paths:
       - "fase-2/flags-service/**"
       - ".github/workflows/ci-flags.yml"
