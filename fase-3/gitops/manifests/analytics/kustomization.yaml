@@ -12,7 +12,6 @@ kind: Kustomization
 # analytics-service usa SQS + DynamoDB (schemaless) -> sem Job de migration.
 resources:
 - ../../../analytics/k8s/base
-- externalsecret.yaml
 
 namespace: toggle
 
