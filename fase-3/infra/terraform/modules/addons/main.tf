@@ -82,14 +82,14 @@ resource "helm_release" "external_secrets" {
   version          = var.external_secrets_chart_version
   namespace        = "external-secrets"
   create_namespace = true
-  
-  timeout          = 600
-  cleanup_on_fail  = true
+
+  timeout         = 600
+  cleanup_on_fail = true
 
   values = [
     yamlencode({
       installCRDs = true
-      
+
       serviceAccount = {
         create = true
         name   = "external-secrets"
