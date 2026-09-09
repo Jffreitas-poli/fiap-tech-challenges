@@ -7,7 +7,7 @@ kind: Kustomization
 # pelo External Secrets Operator a partir do AWS Secrets Manager
 # (externalsecret.yaml + ClusterSecretStore em manifests/platform).
 resources:
-- ../../../targeting/k8s/base
+- ../../../targeting/k8s/overlays/prod
 - migrate-job.yaml
 
 namespace: toggle
