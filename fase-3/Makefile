@@ -31,7 +31,7 @@ OVERLAYS         := auth flags targeting evaluation analytics platform ingress
 SERVICE_OVERLAYS := auth flags targeting evaluation analytics
 
 # Registry esperado do ambiente (lab)
-REGISTRY := 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge
+REGISTRY := 047719652987.dkr.ecr.us-east-1.amazonaws.com/tech-challenge
 
 # Variáveis derived
 SVC_COUNT := $(shell yq '.services | length' "$(FASE3)/services.yaml" 2>/dev/null || echo "0")
@@ -367,13 +367,13 @@ selftest:
 	expect_fail "$$w" lint-registry "allowed-images.txt vazio"; \
 	rm -rf "$$w"; \
 	w=$$(setup); \
-	sed -i 's#newName: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/flags-image#newName: evil.example.com/tech-challenge/flags-image#' \
+	sed -i 's#newName: 047719652987.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/flags-image#newName: evil.example.com/tech-challenge/flags-image#' \
 		"$$w/fase-3/gitops/manifests/flags/kustomization.yaml"; \
 	expect_fail "$$w" lint-registry "imagem de registry nao autorizado (evil.example.com)"; \
 	rm -rf "$$w"; \
 	echo "selftest: PORTAO lint-gitops (5f) + render-diff"; \
 	w=$$(setup); \
-	printf 'images:\n- name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/auth-image\n  newName: 361075236043.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/auth-image\n  newTag: deadbeefdeadbeefdeadbeefdeadbeefdeadbeef\n' \
+	printf 'images:\n- name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/auth-image\n  newName: 047719652987.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/auth-image\n  newTag: deadbeefdeadbeefdeadbeefdeadbeefdeadbeef\n' \
 		>> "$$w/fase-3/gitops/manifests/auth/kustomization.yaml"; \
 	expect_fail "$$w" lint-gitops "kustomization com images: duplicado (5f)"; \
 	expect_fail "$$w" render-diff "kustomization com images: duplicado (drift de render)"; \
