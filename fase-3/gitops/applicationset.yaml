@@ -57,8 +57,8 @@ spec:
     # `fase-3/<svc>/k8s/overlays/lab/` e nao deve haver. Nao ha matrix com
     # [lab, prod] enquanto envs/prod nao for ativado (fora das etapas 3-7).
     - git:
-        repoURL: https://github.com/NyEstevo/fiap-tech-challenges.git
-        revision: lab
+        repoURL: https://github.com/Jffreitas-poli/fiap-tech-challenges.git
+        revision: lab-jeff
         directories:
           - path: fase-3/gitops/manifests/*
 
@@ -72,8 +72,8 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/NyEstevo/fiap-tech-challenges.git
-        targetRevision: lab
+        repoURL: https://github.com/Jffreitas-poli/fiap-tech-challenges.git
+        targetRevision: lab-jeff
         path: '{{ .path.path }}'
       destination:
         server: https://kubernetes.default.svc
