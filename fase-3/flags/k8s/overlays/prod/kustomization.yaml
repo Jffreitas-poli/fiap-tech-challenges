@@ -12,3 +12,12 @@ resources:
 - ../../base
 
 namespace: toggle
+
+patches:
+  - target:
+      kind: ExternalSecret
+      name: flags-secret
+    patch: |-
+      - op: replace
+        path: /spec/data/0/remoteRef/key
+        value: tc-rds-flags-prod-credentials

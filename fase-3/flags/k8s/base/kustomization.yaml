@@ -13,4 +13,5 @@ kind: Kustomization
 resources:
 - configmap.yaml
 - deployment.yaml
+- externalsecret.yaml
 - service.yaml
