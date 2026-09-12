@@ -314,5 +314,5 @@ resource "aws_eks_pod_identity_association" "app_association" {
   cluster_name    = var.cluster_name
   namespace       = "toggle"
   service_account = "analytics-service-scaler"
-  role_arn        = service.keda_irsa_role_arn
+  role_arn        = module.service[local.dynamodb_owner].keda_irsa_role_arn
 }
