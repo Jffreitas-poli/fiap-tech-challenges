@@ -78,6 +78,7 @@ module "eks" {
   node_desired         = 3
   node_max             = 6
   admin_principal_arns = var.admin_principal_arns
+  cluster_addons       = ["coredns", "kube-proxy", "vpc-cni", "eks-pod-identity-agent"]
 }
 
 # Provider OIDC do cluster -- base do IRSA. Bloco identico ao de envs/lab; em
@@ -307,4 +308,13 @@ resource "null_resource" "root_app" {
   }
 
   depends_on = [module.addons]
+}
+
+resource "aws_eks_pod_identity_association" "app_association" {
+  cluster_name    = var.cluster_name
+  namespace       = "toggle"
+  service_account = "analytics-service-scaler"
+  role_arn        = module.service[local.dynamodb_owner].keda_irsa_role_arn
+
+  depends_on = [module.addons, module.eks]
 }
