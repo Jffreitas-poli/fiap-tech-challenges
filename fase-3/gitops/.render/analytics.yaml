@@ -150,4 +150,5 @@ metadata:
   namespace: toggle
 spec:
   podIdentity:
+    identityOwner: keda-operator
     provider: aws
