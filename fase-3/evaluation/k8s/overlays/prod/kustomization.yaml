@@ -10,6 +10,7 @@ kind: Kustomization
 # 'kustomize edit set image' -- mesma mecanica do overlay lab de hoje.
 resources:
 - ../../base
+- serviceaccount.yaml
 
 namespace: toggle
 
@@ -30,3 +31,10 @@ patches:
       - op: replace
         path: /spec/data/3/remoteRef/key
         value: tc-evaluation-app-prod
+  - target:
+      kind: Deployment
+      name: evaluation-deployment
+    patch: |-
+      - op: add
+        path: /spec/template/spec/serviceAccountName
+        value: evaluation-service-account
