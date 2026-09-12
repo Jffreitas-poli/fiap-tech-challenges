@@ -315,4 +315,6 @@ resource "aws_eks_pod_identity_association" "app_association" {
   namespace       = "toggle"
   service_account = "analytics-service-scaler"
   role_arn        = module.service[local.dynamodb_owner].keda_irsa_role_arn
+
+  depends_on = [module.addons, module.eks]
 }
