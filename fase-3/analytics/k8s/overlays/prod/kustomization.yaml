@@ -44,3 +44,10 @@ patches:
       - op: replace
         path: /spec/triggers/0/metadata/identityOwner
         value: keda-operator
+  - target:
+      kind: TriggerAuthentication
+      name: keda-aws-credentials
+    patch: |
+      - op: add
+        path: /spec/podIdentity/identityOwner
+        value: keda-operator
