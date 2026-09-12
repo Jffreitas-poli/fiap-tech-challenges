@@ -161,7 +161,7 @@ data "aws_iam_policy_document" "keda_trust" {
 
     principals {
       type        = "Service"
-      identifiers = "pods.eks.amazonaws.com"
+      identifiers = ["pods.eks.amazonaws.com"]
     }
   }
 }
