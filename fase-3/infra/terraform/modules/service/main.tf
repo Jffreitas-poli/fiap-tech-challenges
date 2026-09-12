@@ -51,9 +51,6 @@ locals {
   queue_arn = var.spec.queue.enabled ? "arn:aws:sqs:${var.region}:${var.account_id}:${local.queue_name}" : null
 
   create_keda_iam = var.create_iam_role && var.spec.queue.enabled && var.spec.queue.keda
-
-  # host do issuer sem o esquema -- e a forma que a condition do IRSA exige
-  oidc_issuer_host = var.oidc_issuer_url == null ? null : replace(var.oidc_issuer_url, "https://", "")
 }
 
 ########################################################################
