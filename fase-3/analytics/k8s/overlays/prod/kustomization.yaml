@@ -35,3 +35,12 @@ patches:
       - op: add
         path: /spec/template/spec/serviceAccountName
         value: analytics-service-account
+  - target:
+      group: keda.sh
+      kind: ScaledObject
+      name: analytics-service-scaler
+      version: v1alpha1
+    patch: |
+    - op: replace
+      path: /spec/triggers/0/metadata/identityOwner
+      value: keda-operator
