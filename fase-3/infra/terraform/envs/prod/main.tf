@@ -310,8 +310,8 @@ resource "null_resource" "root_app" {
 
 resource "aws_eks_pod_identity_association" "app_association" {
   cluster_name    = var.cluster_name
-  namespace       = "toggle"
-  service_account = "analytics-service-scaler"
+  namespace       = "keda"
+  service_account = "keda-operator"
   role_arn        = module.service[local.dynamodb_owner].keda_irsa_role_arn
 
   depends_on = [module.addons, module.eks]
