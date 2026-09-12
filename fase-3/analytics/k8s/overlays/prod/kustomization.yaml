@@ -41,6 +41,6 @@ patches:
       name: analytics-service-scaler
       version: v1alpha1
     patch: |
-    - op: replace
-      path: /spec/triggers/0/metadata/identityOwner
-      value: keda-operator
+      - op: replace
+        path: /spec/triggers/0/metadata/identityOwner
+        value: keda-operator
