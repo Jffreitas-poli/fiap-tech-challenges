@@ -139,7 +139,7 @@ spec:
       metadata:
         awsRegion: us-east-1
         queueLength: "5"
-        queueURL: https://sqs.us-east-1.amazonaws.com/047719652987/tc-sqs
+        queueURL: https://sqs.us-east-1.amazonaws.com/047719652987/tc-sqs-prod
       type: aws-sqs-queue
 ---
 apiVersion: keda.sh/v1alpha1
