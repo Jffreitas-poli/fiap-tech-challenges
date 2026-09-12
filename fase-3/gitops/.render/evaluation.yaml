@@ -58,8 +58,6 @@ spec:
                 name: evaluation-configmap
             - secretRef:
                 name: evaluation-secret
-            - secretRef:
-                name: aws-session-creds
           image: 047719652987.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/evaluation-image:0.0.0-lab.17-62d79f0
           livenessProbe:
             failureThreshold: 3
