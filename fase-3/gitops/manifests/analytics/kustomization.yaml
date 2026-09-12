@@ -61,7 +61,7 @@ patches:
 - patch: |
     - op: replace
       path: /spec/triggers/0/metadata/queueURL
-      value: https://sqs.us-east-1.amazonaws.com/047719652987/tc-sqs
+      value: https://sqs.us-east-1.amazonaws.com/047719652987/tc-sqs-prod
     - op: replace
       path: /spec/triggers/0/metadata/awsRegion
       value: us-east-1
