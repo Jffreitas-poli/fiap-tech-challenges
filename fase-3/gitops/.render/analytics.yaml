@@ -1,4 +1,12 @@
 apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::047719652987:role/tc-eks-dynamo-prod-irsa
+  name: analytics-service-account
+  namespace: toggle
+---
+apiVersion: v1
 data:
   PORT: "8005"
 kind: ConfigMap
@@ -50,7 +58,7 @@ spec:
                 name: analytics-secret
             - secretRef:
                 name: aws-session-creds
-          image: 047719652987.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/analytics-image:0.0.0-lab.11-8830f3d
+          image: 047719652987.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/analytics-image:0.0.0-lab.13-31bde2d
           livenessProbe:
             failureThreshold: 3
             httpGet:
@@ -85,6 +93,7 @@ spec:
               path: /health
               port: 8005
             periodSeconds: 5
+      serviceAccountName: analytics-service-account
 ---
 apiVersion: external-secrets.io/v1beta1
 kind: ExternalSecret

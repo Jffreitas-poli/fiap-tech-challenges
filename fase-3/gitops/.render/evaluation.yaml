@@ -1,4 +1,12 @@
 apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::047719652987:role/tc-eks-sqs-prod-irsa
+  name: evaluation-service-account
+  namespace: toggle
+---
+apiVersion: v1
 data:
   FLAG_SERVICE_URL: http://flags-service:8002
   PORT: "8004"
@@ -87,6 +95,7 @@ spec:
               path: /health
               port: 8004
             periodSeconds: 5
+      serviceAccountName: evaluation-service-account
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
