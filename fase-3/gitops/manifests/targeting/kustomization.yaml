@@ -23,4 +23,4 @@ replicas:
 images:
 - name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/targeting-image
   newName: 047719652987.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/targeting-image
-  newTag: 0.0.0-lab.11-8830f3d
+  newTag: 0.0.0-lab.13-31bde2d
