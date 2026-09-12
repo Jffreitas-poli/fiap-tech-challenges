@@ -41,13 +41,5 @@ patches:
       name: analytics-service-scaler
       version: v1alpha1
     patch: |
-      - op: replace
+      - op: remove
         path: /spec/triggers/0/metadata/identityOwner
-        value: keda
-  - target:
-      kind: TriggerAuthentication
-      name: keda-aws-credentials
-    patch: |
-      - op: add
-        path: /spec/podIdentity/identityOwner
-        value: keda
