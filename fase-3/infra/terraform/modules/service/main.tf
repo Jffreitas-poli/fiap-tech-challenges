@@ -51,9 +51,6 @@ locals {
   queue_arn = var.spec.queue.enabled ? "arn:aws:sqs:${var.region}:${var.account_id}:${local.queue_name}" : null
 
   create_keda_iam = var.create_iam_role && var.spec.queue.enabled && var.spec.queue.keda
-
-  # host do issuer sem o esquema -- e a forma que a condition do IRSA exige
-  oidc_issuer_host = var.oidc_issuer_url == null ? null : replace(var.oidc_issuer_url, "https://", "")
 }
 
 ########################################################################
@@ -152,25 +149,16 @@ data "aws_iam_policy_document" "keda_trust" {
   count = local.create_keda_iam ? 1 : 0
 
   statement {
-    sid     = "KedaIrsaAssumeRole"
-    effect  = "Allow"
-    actions = ["sts:AssumeRoleWithWebIdentity"]
+    sid    = "KedaIrsaAssumeRole"
+    effect = "Allow"
+    actions = [
+      "sts:AssumeRole",
+      "sts:TagSession"
+    ]
 
     principals {
-      type        = "Federated"
-      identifiers = [var.oidc_provider_arn]
-    }
-
-    condition {
-      test     = "StringEquals"
-      variable = "${local.oidc_issuer_host}:sub"
-      values   = ["system:serviceaccount:${var.keda_namespace}:${var.keda_service_account}"]
-    }
-
-    condition {
-      test     = "StringEquals"
-      variable = "${local.oidc_issuer_host}:aud"
-      values   = ["sts.amazonaws.com"]
+      type        = "Service"
+      identifiers = ["pods.eks.amazonaws.com"]
     }
   }
 }

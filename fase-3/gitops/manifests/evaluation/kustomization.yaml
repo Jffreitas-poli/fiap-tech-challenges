@@ -37,15 +37,6 @@ patches:
     kind: ConfigMap
     name: evaluation-configmap
 - patch: |
-    - op: add
-      path: /spec/template/spec/containers/0/envFrom/-
-      value:
-        secretRef:
-          name: aws-session-creds
-  target:
-    kind: Deployment
-    name: evaluation-deployment
-- patch: |
     - op: replace
       path: /spec/minReplicas
       value: 1

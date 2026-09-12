@@ -151,9 +151,7 @@ module "service" {
 
   dynamodb_point_in_time_recovery = var.dynamodb_point_in_time_recovery
 
-  create_iam_role   = var.create_iam_role
-  oidc_provider_arn = one(aws_iam_openid_connect_provider.eks[*].arn)
-  oidc_issuer_url   = module.eks.cluster_oidc_issuer_url
+  create_iam_role = var.create_iam_role
 }
 
 ########################################################################

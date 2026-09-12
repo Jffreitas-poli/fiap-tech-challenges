@@ -203,27 +203,3 @@ variable "create_iam_role" {
   type        = bool
   default     = false
 }
-
-variable "oidc_provider_arn" {
-  description = "ARN do IAM OIDC provider do cluster EKS. Obrigatorio quando create_iam_role = true."
-  type        = string
-  default     = null
-}
-
-variable "oidc_issuer_url" {
-  description = "URL do OIDC issuer do cluster EKS (com https://). Obrigatorio quando create_iam_role = true."
-  type        = string
-  default     = null
-}
-
-variable "keda_namespace" {
-  description = "Namespace onde roda o operator do KEDA."
-  type        = string
-  default     = "keda"
-}
-
-variable "keda_service_account" {
-  description = "ServiceAccount do operator do KEDA que assume a role de IRSA."
-  type        = string
-  default     = "keda-operator"
-}

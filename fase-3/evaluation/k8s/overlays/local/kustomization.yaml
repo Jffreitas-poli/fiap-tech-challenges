@@ -13,3 +13,13 @@ namespace: toggle
 images:
 - name: 047719652987.dkr.ecr.us-east-2.amazonaws.com/tech-challenge/evaluation-image
   newTag: "1.0"
+
+- patch: |
+    - op: add
+      path: /spec/template/spec/containers/0/envFrom/-
+      value:
+        secretRef:
+          name: aws-session-creds
+  target:
+    kind: Deployment
+    name: evaluation-deployment
