@@ -152,25 +152,16 @@ data "aws_iam_policy_document" "keda_trust" {
   count = local.create_keda_iam ? 1 : 0
 
   statement {
-    sid     = "KedaIrsaAssumeRole"
-    effect  = "Allow"
-    actions = ["sts:AssumeRoleWithWebIdentity"]
+    sid    = "KedaIrsaAssumeRole"
+    effect = "Allow"
+    actions = [
+      "sts:AssumeRole",
+      "sts:TagSession"
+    ]
 
     principals {
-      type        = "Federated"
-      identifiers = [var.oidc_provider_arn]
-    }
-
-    condition {
-      test     = "StringEquals"
-      variable = "${local.oidc_issuer_host}:sub"
-      values   = ["system:serviceaccount:${var.keda_namespace}:${var.keda_service_account}"]
-    }
-
-    condition {
-      test     = "StringEquals"
-      variable = "${local.oidc_issuer_host}:aud"
-      values   = ["sts.amazonaws.com"]
+      type        = "Service"
+      identifiers = "pods.eks.amazonaws.com"
     }
   }
 }
