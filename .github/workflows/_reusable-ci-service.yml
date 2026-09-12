@@ -1,6 +1,6 @@
 name: _reusable-ci-service
 
-# CI/DevSecOps de UM microsservico. Chamado por ci-<svc>.yml.
+# CI/DevSecOps de UM microsservico. Chamado por ci-<svc>.yml. 
 # Estagios sequenciais (cada job depende do anterior); um CRITICO em qualquer
 # scan de seguranca falha o job e barra os seguintes.
 #
