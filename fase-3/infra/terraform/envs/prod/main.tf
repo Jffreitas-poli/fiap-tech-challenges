@@ -151,7 +151,7 @@ module "service" {
 
   dynamodb_point_in_time_recovery = var.dynamodb_point_in_time_recovery
 
-  create_iam_role   = var.create_iam_role
+  create_iam_role = var.create_iam_role
 }
 
 ########################################################################
